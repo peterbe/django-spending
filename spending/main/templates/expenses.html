@@ -1,0 +1,96 @@
+{% extends "base.html" %}
+
+{% block extrahead %}
+<style>
+.new td { font-weight: bold; }
+</style>
+{% endblock %}
+
+{% block main %}
+<table id="expenses" class="table table-condensed">
+  <thead>
+    <tr>
+      <th>Amount</th>
+      <th>Who</th>
+      <th>Date</th>
+      <th>Category</th>
+      <th>Notes</th>
+    </tr>
+  <thead>
+  <tfoot>
+    <tr>
+      <th class="total"></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+    </tr>
+  </tfoot>
+  <tbody>
+  </tbody>
+</table>
+{% endblock %}
+
+{% block extrajs %}
+<script>
+  function tsep(n,swap) {
+    var ts=",", ds="."; // thousands and decimal separators
+    if (swap) { ts=","; ts="."; } // swap if requested
+
+    var ns = String(n),ps=ns,ss=""; // numString, prefixString, suffixString
+    var i = ns.indexOf(".");
+    if (i!=-1) { // if ".", then split:
+      ps = ns.substring(0,i);
+      ss = ds+ns.substring(i+1);
+    }
+    return ps.replace(/(\d)(?=(\d{3})+([.]|$))/g,"$1"+ts)+ss;
+  }
+
+function format_amount(amount) {
+  return '$' + tsep(amount.toFixed(2));
+}
+
+function add_rows(rows, highlight) {
+  var mom = $('#expenses tbody');
+  $.each(rows, function(i, each) {
+    var $tr = $('<tr>');
+    if (highlight) {
+      $tr.addClass('new');
+    }
+    $('<td>')
+      .append($('<a>')
+              .attr('href', '/expenses/' + each.pk + '/edit/')
+              .text(each.amount_string))
+      .appendTo($tr);
+    $('<td>').text(each.user).appendTo($tr);
+    $('<td>').text(each.date).appendTo($tr);
+    $('<td>').text(each.category).appendTo($tr);
+    $('<td>').text(each.notes).appendTo($tr);
+    $tr.appendTo(mom);
+    total += each.amount;
+  });
+  $('tfoot .total').text(format_amount(total));
+}
+var latest = null;
+var total = 0.0;
+
+function repeat() {
+  $('.new').removeClass('new');
+  $.getJSON(location.href, {latest: latest}, function(r) {
+    add_rows(r.rows, true);
+    latest = r.latest;
+  });
+}
+
+$(function() {
+  $.getJSON(location.href, function(r) {
+    add_rows(r.rows, false);
+    latest = r.latest;
+  });
+
+  setInterval(repeat, 10 * 1000);
+
+
+});
+</script>
+{% endblock %}

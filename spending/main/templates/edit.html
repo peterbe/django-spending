@@ -1,0 +1,13 @@
+{% extends "home.html" %}
+
+{% load url from future %}
+
+{% block main %}
+{{ block.super }}
+
+  <form action="{% url 'delete_expense' expense.pk %}" method="post" class="form-horizontal">{% csrf_token %}
+    <div>
+    <button type="submit" class="btn btn-primary btn-danger">Delete</button>
+    </div>
+  </form>
+{% endblock %}

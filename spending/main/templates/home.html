@@ -1,0 +1,43 @@
+{% extends "base.html" %}
+
+
+{% comment %}
+{% block pre_main %}
+      <!-- Jumbotron -->
+      <div class="jumbotron">
+        <a class="btn btn-large btn-success" href="/enter">Enter stuff</a>
+      </div>
+
+      <hr>
+{% endblock %}
+{% endcomment %}
+
+
+{% block main %}
+  {% if user %}
+  <form method="post" class="form-horizontal">{% csrf_token %}
+    {{ form }}
+    <div class="form-actions">
+    <button type="submit" class="btn btn-primary">Save</button>
+    <button type="reset" class="btn">Cancel</button>
+    </div>
+  </form>
+  {% else %}
+  <p><a href="/admin/?next=/">Log in</a></p>
+  {% endif %}
+
+{% endblock %}
+{% block extrajs %}
+<script src="{{ STATIC_URL }}js/libs/bootstrap-typeahead.min.js"></script>
+<script>
+var categories = {{ category_names|safe }};
+$(function() {
+  if ($('#id_amount').val() == '') {
+    $('#id_amount').focus();
+  }
+  $('.typeahead').typeahead({
+    source: categories
+  });
+});
+</script>
+{% endblock %}
