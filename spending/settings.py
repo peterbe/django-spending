@@ -166,5 +166,6 @@ CACHES = {
     }
 }
 
+SESSION_COOKIE_AGE = 60 * 60 * 24 * 365  # 1 year
 
 from local_settings import *
