@@ -1,20 +1,8 @@
 {% extends "base.html" %}
 
 
-{% comment %}
-{% block pre_main %}
-      <!-- Jumbotron -->
-      <div class="jumbotron">
-        <a class="btn btn-large btn-success" href="/enter">Enter stuff</a>
-      </div>
-
-      <hr>
-{% endblock %}
-{% endcomment %}
-
-
 {% block main %}
-  {% if user %}
+  {% if user.is_authenticated %}
   <form method="post" class="form-horizontal">{% csrf_token %}
     {{ form }}
     <div class="form-actions">
@@ -23,7 +11,7 @@
     </div>
   </form>
   {% else %}
-  <p><a href="/admin/?next=/">Log in</a></p>
+  <p><a href="/login/?next=/">Log in</a></p>
   {% endif %}
 
 {% endblock %}

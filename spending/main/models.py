@@ -14,6 +14,9 @@ def now():
 class Category(models.Model):
     name = models.CharField(max_length=100)
 
+    def __unicode__(self):
+        return self.name
+
 
 class Expense(models.Model):
     amount = models.DecimalField(max_digits=10, decimal_places=2)
