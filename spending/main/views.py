@@ -1,6 +1,9 @@
 import json
 import datetime
 import locale
+import time
+import random
+from collections import defaultdict
 from django import http
 from django.shortcuts import render, get_object_or_404, redirect
 from django.core.urlresolvers import reverse
@@ -160,3 +163,75 @@ def delete_expense(request, pk):
     )
     expense.delete()
     return redirect(reverse('expenses'))
+
+
+@login_required
+def charts(request):
+    data = {}
+    return render(request, 'charts.html', data)
+
+
+@login_required
+def charts_timeline(request):
+
+    def get_series():
+        interval = datetime.timedelta(days=7)
+        first, = Expense.objects.all().order_by('date')[:1]
+        last, = Expense.objects.all().order_by('-date')[:1]
+        last = last.date
+        date = first.date
+
+        points = defaultdict(list)
+        cum_points = defaultdict(int)
+        categories = [(x.pk, x.name) for x in
+                      Category.objects.all()]
+        _categories = dict(categories)
+        while date < last:
+            next = date + interval
+            counts = defaultdict(int)
+            for expense in (Expense.objects
+                         .filter(added__gte=date,
+                                 added__lt=next)):
+                counts[expense.category_id] += float(expense.amount)
+
+            for category_id, name in categories:
+                count = counts[category_id]
+                points[name].append((date, count + cum_points.get(category_id, 0)))
+
+            date = next
+
+        colors = ColorPump()
+        series = []
+
+        for name, data in points.iteritems():
+            series.append({
+              'color': colors.next(),
+              'name': name,
+              'data': [{'x': int(time.mktime(a.timetuple())), 'y': b} for (a, b) in data]
+            })
+
+        return series
+
+    data = {'data': get_series()}
+    from pprint import pprint
+    pprint(data)
+
+    return http.HttpResponse(json.dumps(data), mimetype="application/json")
+
+
+class ColorPump(object):
+    _colors = (
+        '#5C8D87,#994499,#6633CC,#B08B59,#DD4477,#22AA99,'
+        '#668CB3,#DD5511,#D6AE00,#668CD9,#3640AD,'
+        '#ff5800,#0085cc,#c747a3,#26B4E3,#bd70c7,#cddf54,#FBD178'
+        .split(',')
+    )
+    def __init__(self):
+        self.colors = iter(self._colors)
+
+    def next(self):
+        try:
+            return self.colors.next()
+        except StopIteration:
+            return "#%s" % "".join([hex(random.randrange(0, 255))[2:]
+                                    for i in range(3)])

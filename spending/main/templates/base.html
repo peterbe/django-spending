@@ -104,6 +104,7 @@
                 <li {% if current_url == '/' %}class="active"{% endif %}><a href="/">Home</a></li>
                 {% if user.is_authenticated %}
                 <li {% if current_url == '/expenses/' %}class="active"{% endif %}><a href="{% url 'expenses' %}">Expenses</a></li>
+                <li {% if current_url == '/charts/' %}class="active"{% endif %}><a href="{% url 'charts' %}">Charts</a></li>
                 <li>
                 <a href="/admin/logout/?next=/">Log out ({{ user.username }})</a></li>
                 {% else %}

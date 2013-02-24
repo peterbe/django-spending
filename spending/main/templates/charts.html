@@ -1,0 +1,75 @@
+{% extends "base.html" %}
+
+{% block extrahead %}
+<link href="{{ STATIC_URL }}rickshaw/rickshaw.min.css" rel="stylesheet" type="text/css">
+
+<style>
+</style>
+{% endblock %}
+
+{% block main %}
+<div class="timeline" class="chart">
+  <div id="timeline">
+    <div class="y-axis"></div>
+    <div class="chart"></div>
+    <div class="legend"></div>
+  </div>
+</div>
+{% endblock %}
+
+{% block extrajs %}
+<script src="{{ STATIC_URL }}js/libs/d3.min.js"></script>
+<script src="{{ STATIC_URL }}rickshaw/rickshaw.js"></script>
+<script>
+var LineGraph = function(id, url, options) {
+
+  new Rickshaw.Graph.Ajax( {
+     element: document.querySelector("#" + id),
+    renderer: 'line',
+    interpolation: options.interpolation || 'linear',
+    height: 400,
+    width: 700,
+    dataURL: url,
+    onData: function(d) {
+      return d.data;
+    },
+    onComplete: function(transport) {
+      var graph = transport.graph;
+
+      var detail = new Rickshaw.Graph.HoverDetail({
+         graph: graph,
+        yFormatter: function(y) {
+          return y;
+        }
+      });
+
+      var y_ticks = new Rickshaw.Graph.Axis.Y( {
+         graph: graph,
+        pixelsPerTick: 35,  // default is 75
+        orientation: 'left',
+        tickFormat: Rickshaw.Fixtures.Number.formatKMBT,
+        element: document.querySelector('#' + id + ' .y-axis')
+      } );
+      var x_axis = new Rickshaw.Graph.Axis.Time( { graph: graph } );
+      var legend = new Rickshaw.Graph.Legend( {
+         element: document.querySelector('#' + id + ' .legend'),
+        graph: graph
+      } );
+
+      graph.render();
+
+    }
+  });
+
+};
+
+$(function() {
+  LineGraph('timeline', '/charts/timeline/', {
+     //interpolation: 'cardinal'  // or 'linear'
+     interpolation: 'linear'
+  });
+
+
+});
+</script>
+{% endblock %}

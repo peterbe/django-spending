@@ -11,4 +11,6 @@ urlpatterns = patterns('',
     url('^login/$',
     login, {'template_name': 'login.html'},
     name='login'),
+    url('^charts/$', views.charts, name='charts'),
+    url('^charts/timeline/$', views.charts_timeline, name='charts_timeline'),
 )
