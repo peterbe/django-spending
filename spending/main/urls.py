@@ -6,6 +6,7 @@ from . import views
 urlpatterns = patterns('',
     url('^$', views.home, name='home'),
     url('^expenses/$', views.expenses, name='expenses'),
+    url('^expenses.json$', views.expenses_json, name='expenses_json'),
     url('^expenses/(\d+)/edit/$', views.edit_expense, name='edit_expense'),
     url('^expenses/(\d+)/delete/$', views.delete_expense, name='delete_expense'),
     url('^login/$',

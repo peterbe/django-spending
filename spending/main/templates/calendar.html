@@ -1,4 +1,5 @@
 {% extends "base.html" %}
+{% load url from future %}
 
 {% block main %}
 <table  class="table table-bordered table-striped">
@@ -20,7 +21,7 @@
 <tfoot>
 {% for each in months %}
   <tr>
-    <td>{{ each.date }}</td>
+    <td><a href="{% url 'expenses' %}?month={{ each.month }}&amp;year={{ each.year }}">{{ each.date }}</a></td>
     <td>{{ each.amount_str }}</td>
     <td>{{ each.amount_rent_str }}</td>
     <td>{{ each.amount_total_str }}</td>

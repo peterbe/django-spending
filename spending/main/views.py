@@ -47,13 +47,19 @@ def home(request):
                 date=data['date'],
                 notes=data['notes'].strip()
             )
-            messages.add_message(
-                request,
-                messages.INFO,
-                '$%.2f for %s added' % (expense.amount, expense.category.name)
-            )
+            today = datetime.datetime.utcnow()
+            data = {
+                'success_message': '$%.2f for %s added' % (expense.amount, expense.category.name),
+                'todays_date': today.strftime('%Y-%m-%d'),
+            }
 
-            return redirect(reverse('home'))
+        else:
+            raise NotImplementedError
+        return http.HttpResponse(
+            json.dumps(data),
+            mimetype="application/json"
+        )
+
     else:
         initial = {}
         form = bootstrapform(ExpenseForm(initial=initial))
@@ -76,54 +82,57 @@ def bootstrapform(form):
 
 @login_required
 def expenses(request):
-    first = datetime.datetime.utcnow().replace(hour=0, minute=0, second=0)
-    while first.strftime('%d') != '01':
-        first -= datetime.timedelta(days=1)
-    if (
-        request.META.get('HTTP_X_REQUESTED_WITH') == 'XMLHttpRequest'
-        and
-        'application/json' in request.META.get('HTTP_ACCEPT')
-    ):
-        rows = []
-        qs = Expense.objects.all().select_related()
-        qs = qs.filter(date__gte=first)
+    _now = datetime.datetime.utcnow()
+    month = int(request.GET.get('month', _now.month))
+    year = int(request.GET.get('year', _now.year))
+    first = datetime.datetime(year, month, 1, 0, 0, 0)
+    data = {'first': first}
+    return render(request, 'expenses.html', data)
 
-        if request.GET.get('latest'):
-            latest = datetime.datetime.strptime(
-                request.GET['latest'],
-                '%Y-%m-%d %H:%M:%S'
-            )
-            latest = latest.replace(tzinfo=utc)
-            # to avoid microseconds difference
-            latest += datetime.timedelta(seconds=1)
-            qs = qs.filter(added__gt=latest)
-        else:
-            latest = None
-        if request.GET.get('category'):
-            category = Category.objects.get(name__iexact=request.GET['category'])
-            qs = qs.filter(category=category)
-        for expense in qs.order_by('added'):
-            rows.append({
-                'pk': expense.pk,
-                'amount_string': dollars(expense.amount),
-                'amount': round(float(expense.amount), 2),
-                'user': expense.user.first_name or expense.user.username,
-                'date': expense.date.strftime('%A %d'),
-                'category': expense.category.name,
-                'notes': expense.notes
-            })
-            latest = expense.added
 
-        if latest:
-            latest = latest.strftime('%Y-%m-%d %H:%M:%S')
-        result = {
-            'latest': latest,
-            'rows': rows
-        }
-        return http.HttpResponse(json.dumps(result), mimetype="application/json")
+@login_required
+def expenses_json(request):
+    _now = datetime.datetime.utcnow()
+    month = int(request.GET.get('month', _now.month))
+    year = int(request.GET.get('year', _now.year))
+    first = datetime.datetime(year, month, 1, 0, 0, 0)
+    rows = []
+    qs = Expense.objects.all().select_related()
+    qs = qs.filter(date__gte=first)
+
+    if request.GET.get('latest'):
+        latest = datetime.datetime.strptime(
+            request.GET['latest'],
+            '%Y-%m-%d %H:%M:%S'
+        )
+        latest = latest.replace(tzinfo=utc)
+        # to avoid microseconds difference
+        latest += datetime.timedelta(seconds=1)
+        qs = qs.filter(added__gt=latest)
     else:
-        data = {'first': first}
-        return render(request, 'expenses.html', data)
+        latest = None
+    if request.GET.get('category'):
+        category = Category.objects.get(name__iexact=request.GET['category'])
+        qs = qs.filter(category=category)
+    for expense in qs.order_by('added'):
+        rows.append({
+            'pk': expense.pk,
+            'amount_string': dollars(expense.amount),
+            'amount': round(float(expense.amount), 2),
+            'user': expense.user.first_name or expense.user.username,
+            'date': expense.date.strftime('%A %d'),
+            'category': expense.category.name,
+            'notes': expense.notes
+        })
+        latest = expense.added
+
+    if latest:
+        latest = latest.strftime('%Y-%m-%d %H:%M:%S')
+    result = {
+        'latest': latest,
+        'rows': rows
+    }
+    return http.HttpResponse(json.dumps(result), mimetype="application/json")
 
 
 @login_required
@@ -263,6 +272,8 @@ def calendar(request):
                 months.append(bucket)
             bucket = {
                 'date': month,
+                'year': date.year,
+                'month': date.month,
                 'amount': Decimal('0.0'),
                 'amount_rent': Decimal('0.0'),
             }

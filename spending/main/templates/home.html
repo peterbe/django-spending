@@ -1,5 +1,9 @@
 {% extends "base.html" %}
 
+{% block extrahead %}
+<link href="{{ STATIC_URL }}css/libs/alertify/alertify.core.css" rel="stylesheet" type="text/css">
+<link href="{{ STATIC_URL }}css/libs/alertify/alertify.default.css" rel="stylesheet" type="text/css">
+{% endblock %}
 
 {% block main %}
   {% if user.is_authenticated %}
@@ -17,8 +21,26 @@
 {% endblock %}
 {% block extrajs %}
 <script src="{{ STATIC_URL }}js/libs/bootstrap-typeahead.min.js"></script>
+<script src="{{ STATIC_URL }}js/libs/alertify.min.js"></script>
 <script>
 var categories = {{ category_names|safe }};
+
+$.fn.serializeObject = function() {
+  var o = {};
+  var a = this.serializeArray();
+  $.each(a, function() {
+    if (o[this.name] !== undefined) {
+      if (!o[this.name].push) {
+        o[this.name] = [o[this.name]];
+      }
+      o[this.name].push(this.value || '');
+    } else {
+      o[this.name] = this.value || '';
+    }
+  });
+  return o;
+};
+
 $(function() {
   if ($('#id_amount').val() == '') {
     $('#id_amount').focus();
@@ -26,6 +48,22 @@ $(function() {
   $('.typeahead').typeahead({
     source: categories
   });
+
+  $('form').submit(function() {
+    var $form = $(this);
+    $.post(location.href, $form.serializeObject(), function(response) {
+      if (response.success_message) {
+        alertify.success(response.success_message);
+      }
+      if (response.todays_date) {
+        $('#id_date').val(response.todays_date);
+      }
+      $form[0].reset();
+    });
+    return false;
+  });
 });
+
+
 </script>
 {% endblock %}

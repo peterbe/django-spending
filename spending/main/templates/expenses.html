@@ -8,7 +8,10 @@
 
 {% block main %}
 <h3>{{ first|date:"F Y" }}</h3>
-<table id="expenses" class="table table-condensed">
+<table id="expenses" class="table table-condensed"
+       data-month="{{ first|date:"m" }}"
+       data-month="{{ first|date:"Y" }}"
+       >
   <thead>
     <tr>
       <th>Amount</th>
@@ -77,14 +80,18 @@ var total = 0.0;
 
 function repeat() {
   $('.new').removeClass('new');
-  $.getJSON(location.href, {latest: latest}, function(r) {
+  $.getJSON(getURL(), {latest: latest}, function(r) {
     add_rows(r.rows, true);
     latest = r.latest;
   });
 }
 
+function getURL() {
+  return location.href.replace('expenses/', 'expenses.json');
+}
+
 $(function() {
-  $.getJSON(location.href, function(r) {
+  $.getJSON(getURL(), function(r) {
     add_rows(r.rows, false);
     latest = r.latest;
   });
