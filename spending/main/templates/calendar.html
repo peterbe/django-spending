@@ -2,10 +2,28 @@
 
 {% block main %}
 <table  class="table table-bordered table-striped">
+<thead>
+  <tr>
+    <th>Month</th>
+    <th>Total w/o Rent</th>
+    <th>Rent</th>
+    <th>Total w Rent</th>
+  </tr>
+</thead>
+<tfoot>
+  <tr>
+    <td>TOTAL</td>
+    <td>{{ total_str }}</td>
+    <td>{{ total_rent_str }}</td>
+    <td>{{ total_total_str }}</td>
+  </tr>
+<tfoot>
 {% for each in months %}
   <tr>
     <td>{{ each.date }}</td>
     <td>{{ each.amount_str }}</td>
+    <td>{{ each.amount_rent_str }}</td>
+    <td>{{ each.amount_total_str }}</td>
   </tr>
 {% endfor %}
 </table>

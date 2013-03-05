@@ -223,8 +223,8 @@ def charts_timeline(request):
         return series
 
     data = {'data': get_series()}
-    from pprint import pprint
-    pprint(data)
+    #from pprint import pprint
+    #pprint(data)
 
     return http.HttpResponse(json.dumps(data), mimetype="application/json")
 
@@ -263,25 +263,36 @@ def calendar(request):
                 months.append(bucket)
             bucket = {
                 'date': month,
-                'amount': Decimal('0.0')
+                'amount': Decimal('0.0'),
+                'amount_rent': Decimal('0.0'),
             }
-        bucket['amount'] += amount
+        if category_id == rent.pk:
+            bucket['amount_rent'] += amount
+        else:
+            bucket['amount'] += amount
 
     if bucket:
         months.append(bucket)
 
-    total = Decimal('0.0')
+    total = total_rent = Decimal('0.0')
+
     for each in months:
         each['amount_str'] = dollars(each['amount'])
         total += each['amount']
-    months.append({
-        'date': 'TOTAL',
-        'amount': total,
-        'amount_str': dollars(total),
-    })
+        each['amount_rent_str'] = dollars(each['amount_rent'])
+        total_rent += each['amount_rent']
+        each['amount_total_str'] = dollars(
+            each['amount_rent'] + each['amount']
+        )
 
     data = {
         'months': months,
     }
-    print months
+
+    data.update({
+        'total_str': dollars(total),
+        'total_rent_str': dollars(total_rent),
+        'total_total_str': dollars(total_rent + total),
+    })
+
     return render(request, 'calendar.html', data)
