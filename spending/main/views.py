@@ -3,6 +3,7 @@ import datetime
 import locale
 import time
 import random
+from decimal import Decimal
 from collections import defaultdict
 from django import http
 from django.shortcuts import render, get_object_or_404, redirect
@@ -21,6 +22,10 @@ from .models import Expense, Category
 
 
 locale.setlocale(locale.LC_ALL, '')
+
+
+def dollars(amount):
+    return '$' + locale.format('%.2f', amount, True)
 
 
 @csrf_exempt
@@ -71,6 +76,9 @@ def bootstrapform(form):
 
 @login_required
 def expenses(request):
+    first = datetime.datetime.utcnow().replace(hour=0, minute=0, second=0)
+    while first.strftime('%d') != '01':
+        first -= datetime.timedelta(days=1)
     if (
         request.META.get('HTTP_X_REQUESTED_WITH') == 'XMLHttpRequest'
         and
@@ -78,6 +86,8 @@ def expenses(request):
     ):
         rows = []
         qs = Expense.objects.all().select_related()
+        qs = qs.filter(date__gte=first)
+
         if request.GET.get('latest'):
             latest = datetime.datetime.strptime(
                 request.GET['latest'],
@@ -95,10 +105,10 @@ def expenses(request):
         for expense in qs.order_by('added'):
             rows.append({
                 'pk': expense.pk,
-                'amount_string': '$' + locale.format('%.2f', expense.amount, True),
+                'amount_string': dollars(expense.amount),
                 'amount': round(float(expense.amount), 2),
                 'user': expense.user.first_name or expense.user.username,
-                'date': expense.date.strftime('%A %d %B %Y'),
+                'date': expense.date.strftime('%A %d'),
                 'category': expense.category.name,
                 'notes': expense.notes
             })
@@ -112,7 +122,7 @@ def expenses(request):
         }
         return http.HttpResponse(json.dumps(result), mimetype="application/json")
     else:
-        data = {}
+        data = {'first': first}
         return render(request, 'expenses.html', data)
 
 
@@ -235,3 +245,43 @@ class ColorPump(object):
         except StopIteration:
             return "#%s" % "".join([hex(random.randrange(0, 255))[2:]
                                     for i in range(3)])
+
+
+def calendar(request):
+    months = []
+    month = None
+    qs = Expense.objects.all()
+    qs = qs.order_by('date')
+    qs = qs.values_list('amount', 'date', 'category_id')
+    rent = Category.objects.get(name__iexact='Rent')
+    bucket = {}
+    for amount, date, category_id in qs:
+        if date.strftime('%B %Y') != month:
+            month = date.strftime('%B %Y')
+            # new month
+            if bucket:
+                months.append(bucket)
+            bucket = {
+                'date': month,
+                'amount': Decimal('0.0')
+            }
+        bucket['amount'] += amount
+
+    if bucket:
+        months.append(bucket)
+
+    total = Decimal('0.0')
+    for each in months:
+        each['amount_str'] = dollars(each['amount'])
+        total += each['amount']
+    months.append({
+        'date': 'TOTAL',
+        'amount': total,
+        'amount_str': dollars(total),
+    })
+
+    data = {
+        'months': months,
+    }
+    print months
+    return render(request, 'calendar.html', data)

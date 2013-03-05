@@ -13,4 +13,5 @@ urlpatterns = patterns('',
     name='login'),
     url('^charts/$', views.charts, name='charts'),
     url('^charts/timeline/$', views.charts_timeline, name='charts_timeline'),
+    url('^calendar/$', views.calendar, name='calendar'),
 )

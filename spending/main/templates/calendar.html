@@ -1,0 +1,12 @@
+{% extends "base.html" %}
+
+{% block main %}
+<table  class="table table-bordered table-striped">
+{% for each in months %}
+  <tr>
+    <td>{{ each.date }}</td>
+    <td>{{ each.amount_str }}</td>
+  </tr>
+{% endfor %}
+</table>
+{% endblock %}
