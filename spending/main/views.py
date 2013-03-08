@@ -197,8 +197,16 @@ def charts_timeline(request):
         interval = datetime.timedelta(days=7)
         first, = Expense.objects.all().order_by('date')[:1]
         last, = Expense.objects.all().order_by('-date')[:1]
+        first = first.date
         last = last.date
-        date = first.date
+
+        #first = datetime.datetime(first.year, first.month, first.day)
+        #first = first.replace(tzinfo=utc)
+        #last = datetime.datetime(last.year, last.month, last.day)
+        #last = last.replace(tzinfo=utc)
+
+        date = first
+        print (date, last)
 
         points = defaultdict(list)
         cum_points = defaultdict(int)
@@ -209,15 +217,17 @@ def charts_timeline(request):
             next = date + interval
             counts = defaultdict(int)
             for expense in (Expense.objects
-                         .filter(added__gte=date,
-                                 added__lt=next)):
+                         .filter(date__gte=date,
+                                 date__lt=next)):
                 counts[expense.category_id] += float(expense.amount)
 
             for category_id, name in categories:
                 count = counts[category_id]
-                points[name].append((date, count + cum_points.get(category_id, 0)))
+                points[name].append((date, count))
 
             date = next
+
+
 
         colors = ColorPump()
         series = []
