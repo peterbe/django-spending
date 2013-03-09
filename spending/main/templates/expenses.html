@@ -1,4 +1,5 @@
 {% extends "base.html" %}
+{% load spending %}
 
 {% block extrahead %}
 <style>
@@ -9,14 +10,13 @@
 {% block main %}
 <h3>{{ first|date:"F Y" }}</h3>
 <table id="expenses" class="table table-condensed"
-       data-month="{{ first|date:"m" }}"
-       data-month="{{ first|date:"Y" }}"
+       data-poll="{% if poll %}true{% else %}false{% endif %}"
        >
   <thead>
     <tr>
-      <th>Amount</th>
+      <th><a href="{% sort_header_url 'amount' %}">Amount</a></th>
       <th>Who</th>
-      <th>Date</th>
+      <th><a href="{% sort_header_url 'date' %}">Date</a></th>
       <th>Category</th>
       <th>Notes</th>
     </tr>
@@ -96,8 +96,9 @@ $(function() {
     latest = r.latest;
   });
 
-  setInterval(repeat, 10 * 1000);
-
+  if ($('table').data('poll')) {
+    setInterval(repeat, 10 * 1000);
+  }
 
 });
 </script>

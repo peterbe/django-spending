@@ -10,11 +10,11 @@
 
 {% block main %}
 
-  <div id="topic-stats">
-    <h2 class="grid_12">Topics</h2>
+  <div id="timeline">
+    <h2 class="grid_12">Timeline</h2>
 
     <div class="grid_8 alpha graph-container">
-      <div class="graph" style="height:400px"></div>
+      <div class="graph" style="height:350px"></div>
      </div>
 
     <div class="grid_4 omega">
@@ -22,125 +22,55 @@
     </div>
   </div>
 
-{% comment %}
-<div class="timeline" class="chart">
-  <div id="timeline">
-    <div class="y-axis"></div>
-    <div class="chart"></div>
-    <div class="legend"></div>
-  </div>
-</div>
-{% endcomment %}
-
 {% endblock %}
 
 {% block extrajs %}
 <script src="{{ STATIC_URL }}js/libs/d3.min.js"></script>
 <script src="{{ STATIC_URL }}jquery-ui/jquery-ui-1.10.1.sortable.min.js"></script>
 <script src="{{ STATIC_URL }}rickshaw/rickshaw.js"></script>
-{% comment %}
 <script>
-var LineGraph = function(id, url, options) {
-
-  new Rickshaw.Graph.Ajax( {
-     element: document.querySelector("#" + id),
-    renderer: 'line',
-    interpolation: options.interpolation || 'linear',
-    height: 400,
-    width: 700,
-    dataURL: url,
-    onData: function(d) {
-      return d.data;
-    },
-    onComplete: function(transport) {
-      var graph = transport.graph;
-
-      var detail = new Rickshaw.Graph.HoverDetail({
-         graph: graph,
-        yFormatter: function(y) {
-          return y;
-        }
-      });
-
-      var y_ticks = new Rickshaw.Graph.Axis.Y( {
-         graph: graph,
-        pixelsPerTick: 35,  // default is 75
-        orientation: 'left',
-        tickFormat: Rickshaw.Fixtures.Number.formatKMBT,
-        element: document.querySelector('#' + id + ' .y-axis')
-      } );
-      var x_axis = new Rickshaw.Graph.Axis.Time( { graph: graph } );
-      var legend = new Rickshaw.Graph.Legend( {
-         element: document.querySelector('#' + id + ' .legend'),
-        graph: graph
-      } );
-
-      graph.render();
-
-    }
-  });
-
-};
-
-$(function() {
-  LineGraph('timeline', '/charts/timeline/', {
-     //interpolation: 'cardinal'  // or 'linear'
-     interpolation: 'linear'
-  });
-
-
-});
-</script>
-{% endcomment %}
-<script>
-  $topics = $('#topic-stats');
-
-  var palette = new Rickshaw.Color.Palette();
-
+  var $timeline = $('#timeline');
 
   var graph = new Rickshaw.Graph.Ajax({
-    element: $topics.find('.graph')[0],
+    element: $timeline.find('.graph')[0],
     //renderer: 'bar',
     dataURL: '/charts/timeline/',
     onData: function(d) {
       return d.data;
     },
     onComplete: function(transport) {
-    var graph = transport.graph;
-  var hoverDetail = new Rickshaw.Graph.HoverDetail( {
-    graph: graph
-  } );
+      var graph = transport.graph;
+      var hoverDetail = new Rickshaw.Graph.HoverDetail( {
+        graph: graph
+      } );
 
-  var legend = new Rickshaw.Graph.Legend( {
-    graph: graph,
-    element: $topics.find('.legend')[0]
-  } );
+      var legend = new Rickshaw.Graph.Legend( {
+        graph: graph,
+        element: $timeline.find('.legend')[0]
+      } );
 
-  new Rickshaw.Graph.Behavior.Series.Toggle({
-    graph: graph,
-    legend: legend
-  });
+      new Rickshaw.Graph.Behavior.Series.Toggle({
+        graph: graph,
+        legend: legend
+      });
 
-  new Rickshaw.Graph.Behavior.Series.Order({
-    graph: graph,
-    legend: legend
-  });
+      new Rickshaw.Graph.Behavior.Series.Order({
+        graph: graph,
+        legend: legend
+      });
 
-  new Rickshaw.Graph.Axis.Time( {
-    graph: graph
-  }).render();
+      new Rickshaw.Graph.Axis.Time( {
+        graph: graph
+      }).render();
 
-  new Rickshaw.Graph.Axis.Y({
-    graph: graph,
-    orientation: 'left',
-    element: $topics.find('.y-axis')[0]
-  }).render();
+      new Rickshaw.Graph.Axis.Y({
+        graph: graph,
+        orientation: 'left',
+        element: $timeline.find('.y-axis')[0]
+      }).render();
 
-        graph.render();
+      graph.render();
     }
-
   });
-
-
 </script>
 {% endblock %}

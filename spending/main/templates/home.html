@@ -6,8 +6,9 @@
 {% endblock %}
 
 {% block main %}
+
   {% if user.is_authenticated %}
-  <form method="post" class="form-horizontal">{% csrf_token %}
+  <form method="post" class="form-horizontal expense-entry">{% csrf_token %}
     {{ form }}
     <div class="form-actions">
     <button type="submit" class="btn btn-primary">Save</button>
@@ -49,16 +50,30 @@ $(function() {
     source: categories
   });
 
-  $('form').submit(function() {
+  $('form.expense-entry').submit(function() {
     var $form = $(this);
     $.post(location.href, $form.serializeObject(), function(response) {
-      if (response.success_message) {
-        alertify.success(response.success_message);
+      if (response.errors) {
+        $.each(response.errors, function(key, message) {
+          alert('ERROR ' + key + ': ' + message);
+        })
+      } else {
+        if (response.success_message) {
+          alertify.success(response.success_message);
+        }
+        if (response.todays_date) {
+          $('#id_date').val(response.todays_date);
+        }
+        if (response.amount) {
+          $('#id_amount').val(response.amount);
+        }
+        if (response.category) {
+          $('#id_category').val(response.category);
+        }
+        if (!response.was_edit) {
+          $form[0].reset();
+        }
       }
-      if (response.todays_date) {
-        $('#id_date').val(response.todays_date);
-      }
-      $form[0].reset();
     });
     return false;
   });

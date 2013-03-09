@@ -5,17 +5,20 @@ import time
 import random
 from decimal import Decimal
 from collections import defaultdict
+from pprint import pprint
 from django import http
 from django.shortcuts import render, get_object_or_404, redirect
 from django.core.urlresolvers import reverse
 from django.views.decorators.csrf import csrf_exempt
 from django.db import transaction
+from django.core.cache import cache
 from django.contrib import messages
 from django.template.loader import get_template
 from django.template import Context
 from django.contrib.auth.decorators import login_required
 from django.utils.timezone import utc
 from django.views.decorators.http import require_POST
+from django.template.defaultfilters import slugify
 
 from .forms import ExpenseForm
 from .models import Expense, Category
@@ -37,7 +40,7 @@ def home(request):
         if form.is_valid():
             data = form.cleaned_data
             try:
-                category = Category.objects.get(name__iexact=data['category'])
+                category = Category.objects.get(name__istartswith=data['category'])
             except Category.DoesNotExist:
                 category = Category.objects.create(name=data['category'])
             expense = Expense.objects.create(
@@ -86,7 +89,11 @@ def expenses(request):
     month = int(request.GET.get('month', _now.month))
     year = int(request.GET.get('year', _now.year))
     first = datetime.datetime(year, month, 1, 0, 0, 0)
-    data = {'first': first}
+    historic = 'month' in request.GET and 'year' in request.GET
+    data = {
+        'first': first,
+        'poll': not historic,
+    }
     return render(request, 'expenses.html', data)
 
 
@@ -98,7 +105,12 @@ def expenses_json(request):
     first = datetime.datetime(year, month, 1, 0, 0, 0)
     rows = []
     qs = Expense.objects.all().select_related()
-    qs = qs.filter(date__gte=first)
+    if month == 12:
+        next = datetime.datetime(year + 1, 1, 1, 0, 0, 0)
+    else:
+        next = datetime.datetime(year, month + 1, 1, 0, 0, 0)
+
+    qs = qs.filter(date__gte=first, date__lt=next)
 
     if request.GET.get('latest'):
         latest = datetime.datetime.strptime(
@@ -114,7 +126,17 @@ def expenses_json(request):
     if request.GET.get('category'):
         category = Category.objects.get(name__iexact=request.GET['category'])
         qs = qs.filter(category=category)
-    for expense in qs.order_by('added'):
+    if request.GET.get('sort'):
+        sort = request.GET.get('sort')
+        if int(request.GET.get('reverse', 0)):
+            sort = '-%s' % sort
+    else:
+        sort = 'date'
+
+    for x in qs.values('added').order_by('-added')[:1]:
+        latest = x['added']
+
+    for expense in qs.order_by(sort):
         rows.append({
             'pk': expense.pk,
             'amount_string': dollars(expense.amount),
@@ -124,7 +146,6 @@ def expenses_json(request):
             'category': expense.category.name,
             'notes': expense.notes
         })
-        latest = expense.added
 
     if latest:
         latest = latest.strftime('%Y-%m-%d %H:%M:%S')
@@ -144,7 +165,7 @@ def edit_expense(request, pk):
         if form.is_valid():
             data = form.cleaned_data
             try:
-                category = Category.objects.get(name__iexact=data['category'])
+                category = Category.objects.get(name__istartswith=data['category'])
             except Category.DoesNotExist:
                 category = Category.objects.create(name=data['category'])
             expense.category = category
@@ -153,12 +174,25 @@ def edit_expense(request, pk):
             expense.notes = data['notes'].strip()
             expense.save()
 
-            messages.add_message(
-                request,
-                messages.INFO,
-                '$%.2f for %s edited' % (expense.amount, expense.category.name)
+            msg = (
+                '%s for %s edited' %
+                (dollars(expense.amount), expense.category.name)
             )
-            return redirect(reverse('expenses'))
+            data = {
+                'success_message': msg,
+                'amount': '%.2f' % expense.amount,
+                'category': expense.category.name,
+            }
+        else:
+            data = {
+                'errors': form.errors,
+            }
+        data['was_edit'] = True
+        return http.HttpResponse(
+            json.dumps(data),
+            mimetype="application/json"
+        )
+
 
     else:
         initial = {'category': expense.category.name}
@@ -206,7 +240,6 @@ def charts_timeline(request):
         #last = last.replace(tzinfo=utc)
 
         date = first
-        print (date, last)
 
         points = defaultdict(list)
         cum_points = defaultdict(int)
@@ -232,20 +265,32 @@ def charts_timeline(request):
         colors = ColorPump()
         series = []
 
+        _totals = {}
         for name, data in points.iteritems():
+            _totals[name] = sum(x[1] for x in data)
             series.append({
-              'color': colors.next(),
+              'color': _get_next_color(name, colors),
               'name': name,
-              'data': [{'x': int(time.mktime(a.timetuple())), 'y': b} for (a, b) in data]
+              'data': [{'x': int(time.mktime(a.timetuple())), 'y': b} for (a, b) in data],
             })
 
+        series.sort(
+            lambda x, y: cmp(_totals[x['name']], _totals[y['name']]),
+            reverse=True
+        )
         return series
 
     data = {'data': get_series()}
-    #from pprint import pprint
-    #pprint(data)
 
     return http.HttpResponse(json.dumps(data), mimetype="application/json")
+
+def _get_next_color(name, colorpump):
+    cache_key = 'timeline-%s' % slugify(name)
+    color = cache.get(cache_key)
+    if color is None:
+        color = colorpump.next()
+        cache.set(cache_key, color, 60 * 60)
+    return color
 
 
 class ColorPump(object):

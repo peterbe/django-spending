@@ -1,1 +1,2 @@
 django-bootstrap-form
+fancy_tag
