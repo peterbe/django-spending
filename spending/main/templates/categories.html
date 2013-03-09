@@ -1,0 +1,22 @@
+{% extends "base.html" %}
+{% load url from future %}
+{% load spending %}
+
+{% block main %}
+<table  class="table table-bordered table-striped">
+<thead>
+  <tr>
+    <th><a href="{% sort_header_url 'category' %}">Category</a></th>
+    <th><a href="{% sort_header_url 'count' %}">Expenses</a></th>
+    <th><a href="{% sort_header_url 'total' %}">Total</a></th>
+  </tr>
+</thead>
+{% for each in categories %}
+  <tr>
+    <td><a href="{% url 'category' each.pk %}">{{ each.name }}</a></td>
+    <td>{{ each.count }}</td>
+    <td>{{ each.total_str }}</td>
+  </tr>
+{% endfor %}
+</table>
+{% endblock %}

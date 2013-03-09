@@ -1,0 +1,57 @@
+{% extends "base.html" %}
+{% load url from future %}
+{% load spending %}
+
+{% block main %}
+<p><a href="{% url 'categories' %}">&larr; Categories</a></p>
+<h3>{{ category.name }}</h3>
+<dl>
+
+  <dt>Total:</dt>
+  <dd>{{ total_str }}</dd>
+
+  <dt>Expenses:<dt>
+  <dd>{{ count }}</dd>
+
+</dl>
+
+<h4>Edit</h4>
+  <form action="{% url 'edit_category' category.pk %}" method="post" class="form-horizontal">{% csrf_token %}
+    {{ edit_form }}
+    <div class="form-actions">
+    <button type="submit" class="btn btn-primary">Save</button>
+    </div>
+  </form>
+
+<h4>Move all {{ count }} expenses to another category</h4>
+<form action="{% url 'move_category' category.pk %}" method="post" class="form-horizontal">{% csrf_token %}
+    {{ move_form }}
+    <div class="form-actions">
+    <button type="submit" class="btn btn-primary">Move them</button>
+    </div>
+  </form>
+
+
+{% if not count %}
+<h4>Delete category</h4>
+  <form action="{% url 'delete_category' category.pk %}" method="post" class="form-horizontal">{% csrf_token %}
+    <div>
+    <button type="submit" class="btn btn-primary btn-danger">Delete</button>
+    </div>
+  </form>
+{% endif %}
+
+{% endblock %}
+
+{% block extrajs %}
+<script src="{{ STATIC_URL }}js/libs/bootstrap-typeahead.min.js"></script>
+<script src="{{ STATIC_URL }}js/libs/alertify.min.js"></script>
+<script>
+var categories = {{ category_names|safe }};
+$(function() {
+  $('.typeahead').typeahead({
+    source: categories
+  });
+});
+</script>
+{% endblock %}

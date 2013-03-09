@@ -20,7 +20,7 @@ from django.utils.timezone import utc
 from django.views.decorators.http import require_POST
 from django.template.defaultfilters import slugify
 
-from .forms import ExpenseForm
+from .forms import ExpenseForm, CategoryForm, CategoryMoveForm
 from .models import Expense, Category
 
 
@@ -72,8 +72,11 @@ def home(request):
     return render(request, 'home.html', data)
 
 
-def _category_names():
-    category_names = [x.name for x in Category.objects.all().order_by('name')]
+def _category_names(exclude=None):
+    qs = Category.objects.all()
+    if exclude:
+        qs = qs.exclude(pk=exclude.pk)
+    category_names = [x.name for x in qs.order_by('name')]
     return json.dumps(category_names)
 
 
@@ -311,6 +314,7 @@ class ColorPump(object):
                                     for i in range(3)])
 
 
+@login_required
 def calendar(request):
     months = []
     month = None
@@ -362,3 +366,79 @@ def calendar(request):
     })
 
     return render(request, 'calendar.html', data)
+
+from django.db.models import Sum
+
+@login_required
+def categories(request):
+    all = []
+    for category in Category.objects.all().order_by('name'):
+        qs = Expense.objects.filter(category=category)
+        category.total = qs.aggregate(Sum('amount'))['amount__sum'] or Decimal('0')
+        category.total_str = dollars(category.total)
+        category.count = qs.count()
+        all.append(category)
+
+    reverse = int(request.GET.get('reverse', 0))
+    if request.GET.get('sort') == 'count':
+        all.sort(key=lambda x: x.count)
+    elif request.GET.get('sort') == 'total':
+        all.sort(key=lambda x: x.total)
+    if reverse:
+        all.reverse()
+    data = {
+        'categories': all,
+    }
+    return render(request, 'categories.html', data)
+
+
+@login_required
+def category(request, pk):
+    category = get_object_or_404(Category, pk=pk)
+    qs = Expense.objects.filter(category=category)
+    total = qs.aggregate(Sum('amount'))['amount__sum'] or Decimal('0')
+    data = {
+        'category': category,
+        'count': qs.count(),
+        'total': total,
+        'total_str': dollars(total),
+        'edit_form': bootstrapform(CategoryForm(instance=category)),
+        'move_form': bootstrapform(CategoryMoveForm()),
+        'category_names': _category_names(exclude=category),
+    }
+    return render(request, 'category.html', data)
+
+
+@login_required
+def delete_category(request, pk):
+    category = get_object_or_404(Category, pk=pk)
+    assert not Expense.objects.filter(category=category).count()
+    category.delete()
+    return redirect(reverse('categories'))
+
+
+@login_required
+@require_POST
+def edit_category(request, pk):
+    category = get_object_or_404(Category, pk=pk)
+    form = CategoryForm(request.POST, instance=category)
+    if form.is_valid():
+        form.save()
+        return redirect(reverse('category', args=(category.pk,)))
+    else:
+        return http.HttpResponse('<h2>Error</h2>' + str(form.errors))
+
+
+@login_required
+@require_POST
+def move_category(request, pk):
+    category = get_object_or_404(Category, pk=pk)
+    form = CategoryMoveForm(request.POST)
+    if form.is_valid():
+        new_category = Category.objects.get(name=form.cleaned_data['name'])
+        for expense in Expense.objects.filter(category=category):
+            expense.category = new_category
+            expense.save()
+        return redirect(reverse('category', args=(category.pk,)))
+    else:
+        return http.HttpResponse('<h2>Error</h2>' + str(form.errors))
