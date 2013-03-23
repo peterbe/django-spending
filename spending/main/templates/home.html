@@ -24,7 +24,7 @@
 <script src="{{ STATIC_URL }}js/libs/bootstrap-typeahead.min.js"></script>
 <script src="{{ STATIC_URL }}js/libs/alertify.min.js"></script>
 <script>
-var categories = {{ category_names|safe }};
+var CATEGORIES = {{ category_names|safe }};
 
 $.fn.serializeObject = function() {
   var o = {};
@@ -47,7 +47,7 @@ $(function() {
     $('#id_amount').focus();
   }
   $('.typeahead').typeahead({
-    source: categories
+    source: CATEGORIES
   });
 
   $('form.expense-entry').submit(function() {

@@ -19,9 +19,12 @@ from django.contrib.auth.decorators import login_required
 from django.utils.timezone import utc
 from django.views.decorators.http import require_POST
 from django.template.defaultfilters import slugify
+from django.contrib.auth.views import login
+from django.middleware.csrf import get_token
 
-from .forms import ExpenseForm, CategoryForm, CategoryMoveForm
+from . import forms
 from .models import Expense, Category
+from .utils import json_view
 
 
 locale.setlocale(locale.LC_ALL, '')
@@ -33,16 +36,19 @@ def dollars(amount):
 
 @csrf_exempt
 @transaction.commit_on_success
-def home(request):
-    data = {}
+def home(request, template_name='home.html', data=None, form_class=forms.ExpenseForm):
+    data = data or {}
     if request.method == 'POST':
-        form = ExpenseForm(data=request.POST)
+        form = form_class(data=request.POST)
         if form.is_valid():
             data = form.cleaned_data
+            category_value = data['category']
+            if category_value == '_other':
+                category_value = data['other_category']
             try:
-                category = Category.objects.get(name__istartswith=data['category'])
+                category = Category.objects.get(name__istartswith=category_value)
             except Category.DoesNotExist:
-                category = Category.objects.create(name=data['category'])
+                category = Category.objects.create(name=category_value)
             expense = Expense.objects.create(
                 category=category,
                 amount=data['amount'],
@@ -55,9 +61,8 @@ def home(request):
                 'success_message': '$%.2f for %s added' % (expense.amount, expense.category.name),
                 'todays_date': today.strftime('%Y-%m-%d'),
             }
-
         else:
-            raise NotImplementedError
+            data = {'errors': form.errors}
         return http.HttpResponse(
             json.dumps(data),
             mimetype="application/json"
@@ -65,11 +70,25 @@ def home(request):
 
     else:
         initial = {}
-        form = bootstrapform(ExpenseForm(initial=initial))
+        form = bootstrapform(forms.ExpenseForm(initial=initial))
     data['form'] = form
 
     data['category_names'] = _category_names()
-    return render(request, 'home.html', data)
+    return render(request, template_name, data)
+
+
+@csrf_exempt
+@transaction.commit_on_success
+def mobile(request):
+    data = {
+        'today': datetime.datetime.utcnow(),
+    }
+    return home(
+        request,
+        template_name='mobile.html',
+        data=data,
+        form_class=forms.MobileExpenseForm
+    )
 
 
 def _category_names(exclude=None):
@@ -84,6 +103,17 @@ def bootstrapform(form):
     template = get_template("bootstrapform/form.html")
     context = Context({'form': form})
     return template.render(context)
+
+
+@login_required
+def categories_json(request):
+    qs = Category.objects.all()
+    result = {
+        'categories': []
+    }
+    for each in qs.order_by('name'):
+        result['categories'].append(each.name)
+    return http.HttpResponse(json.dumps(result), mimetype="application/json")
 
 
 @login_required
@@ -164,7 +194,7 @@ def edit_expense(request, pk):
     data = {}
     expense = get_object_or_404(Expense, pk=pk)
     if request.method == 'POST':
-        form = ExpenseForm(request.POST, instance=expense)
+        form = forms.ExpenseForm(request.POST, instance=expense)
         if form.is_valid():
             data = form.cleaned_data
             try:
@@ -199,7 +229,7 @@ def edit_expense(request, pk):
 
     else:
         initial = {'category': expense.category.name}
-        form = ExpenseForm(instance=expense, initial=initial)
+        form = forms.ExpenseForm(instance=expense, initial=initial)
 
     data['form'] = bootstrapform(form)
     data['expense'] = expense
@@ -402,8 +432,8 @@ def category(request, pk):
         'count': qs.count(),
         'total': total,
         'total_str': dollars(total),
-        'edit_form': bootstrapform(CategoryForm(instance=category)),
-        'move_form': bootstrapform(CategoryMoveForm()),
+        'edit_form': bootstrapform(forms.CategoryForm(instance=category)),
+        'move_form': bootstrapform(forms.CategoryMoveForm()),
         'category_names': _category_names(exclude=category),
     }
     return render(request, 'category.html', data)
@@ -421,7 +451,7 @@ def delete_category(request, pk):
 @require_POST
 def edit_category(request, pk):
     category = get_object_or_404(Category, pk=pk)
-    form = CategoryForm(request.POST, instance=category)
+    form = forms.CategoryForm(request.POST, instance=category)
     if form.is_valid():
         form.save()
         return redirect(reverse('category', args=(category.pk,)))
@@ -433,7 +463,7 @@ def edit_category(request, pk):
 @require_POST
 def move_category(request, pk):
     category = get_object_or_404(Category, pk=pk)
-    form = CategoryMoveForm(request.POST)
+    form = forms.CategoryMoveForm(request.POST)
     if form.is_valid():
         new_category = Category.objects.get(name=form.cleaned_data['name'])
         for expense in Expense.objects.filter(category=category):
@@ -442,3 +472,17 @@ def move_category(request, pk):
         return redirect(reverse('category', args=(category.pk,)))
     else:
         return http.HttpResponse('<h2>Error</h2>' + str(form.errors))
+
+
+
+@json_view
+def mobile_auth(request):
+    data = {}
+    if request.method == 'POST':
+        response = login(request)
+        assert response.status_code == 302, response.status_code
+    else:
+        data['csrf_token'] = get_token(request)
+    if request.user.is_authenticated():
+        data['username'] = request.user.username
+    return data

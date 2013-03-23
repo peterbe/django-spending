@@ -21,6 +21,28 @@ class ExpenseForm(forms.ModelForm):
         exclude = ('added', 'user', 'category')
 
 
+class MobileExpenseForm(forms.ModelForm):
+
+    category = forms.CharField(required=False)
+    other_category = forms.CharField(required=False)
+
+    class Meta:
+        model = Expense
+        exclude = ('added', 'user', 'category')
+
+    def __init__(self, *args, **kwargs):
+        super(MobileExpenseForm, self).__init__(*args, **kwargs)
+        # because we can use `other_category`
+        self.fields['category'].required = False
+        self.fields['date'].required = False
+
+#    def clean(self):
+#        data = super(MobileExpenseForm, self).clean()
+#        if not data.get('category') and data.get('other_category'):
+#            data['category'] = data['other_category']
+#        return data
+
+
 class CategoryForm(forms.ModelForm):
 
     class Meta:

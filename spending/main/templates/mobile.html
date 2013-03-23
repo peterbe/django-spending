@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8">
+    <title>Spending</title>
+
+    <!-- Sets initial viewport load and disables zooming  -->
+    <meta name="viewport" content="initial-scale=1, maximum-scale=1, user-scalable=no">
+
+    <!-- Makes your prototype chrome-less once bookmarked to your phone's home screen -->
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black">
+
+    <!-- Set Apple icons for when prototype is saved to home screen -->
+    <link rel="apple-touch-icon-precomposed" sizes="144x144" href="{{ STATIC_URL }}images/favicon.144.png">
+    <link rel="apple-touch-icon-precomposed" sizes="114x114" href="{{ STATIC_URL }}images/favicon.114.png">
+    <link rel="apple-touch-icon-precomposed" sizes="72x72" href="{{ STATIC_URL }}images/favicon.72.png">
+    <link rel="apple-touch-icon-precomposed" href="{{ STATIC_URL }}images/favicon.57.png">
+
+    <!-- Include the compiled Ratchet CSS -->
+    <link rel="stylesheet" href="{{ STATIC_URL }}ratchet/ratchet.css">
+
+    <!-- Include the compiled Ratchet JS -->
+    <script src="{{ STATIC_URL }}ratchet/ratchet.js"></script>
+
+    <!-- Intro paragraph styles. Delete once you start using this page -->
+    <style type="text/css">
+        .welcome {
+          line-height: 1.5;
+          color: #555;
+        }
+        input.missing, select.missing { border:1px solid red; }
+        .content { display: none; }
+    </style>
+
+  </head>
+  <body>
+
+  <!-- Make sure all your bars are the first things in your <body> -->
+  <header class="bar-title">
+    <h1 class="title">Spending</h1>
+  </header>
+
+  <!-- Wrap all non-bar HTML in the .content div (this is actually what scrolls) -->
+  <div class="content" id="home" data-title="Spending">
+
+    <form action="" class="content-padded expense-entry">
+      <input type="number" name="amount" placeholder="Amount">
+      <input type="date" id="id_date" name="date" placeholder="Date">
+      <!--<textarea rows="3" name="notes" placeholder="Notes"></textarea>-->
+      <input type="text" name="notes" placeholder="Notes">
+      <select name="category">
+      <option value="">Category</option>
+      <option value="_other">Other... (specify)</option>
+      </select>
+      <input type="text" placeholder="Other category" name="other_category">
+      <a class="button button-block">Submit</a>
+<!--    <p>
+      <a href="#signin" class="panel-change">Sign-in</a>
+    </p>
+-->
+      <p>Logged in as <b class="username"></b></p>
+      <p class="messages" style="display:none">
+      </p>
+    </form>
+
+
+  </div>
+  <div class="content" id="signin"
+   data-title="Sign in"
+  >{% csrf_token %}
+    <form action="" class="content-padded">
+      <input type="hidden" name="csrfmiddlewaretoken">
+      <input type="text" name="username" placeholder="Username">
+      <input type="password" name="password" placeholder="Password">
+      <a class="button button-block">Submit</a>
+    </form>
+  </div>
+
+<script src="{{ STATIC_URL }}js/libs/jquery-1.9.1.min.js"></script>
+<script src="{{ STATIC_URL }}js/libs/alertify.min.js"></script>
+<script src="{{ STATIC_URL }}js/mobile.js"></script>
+
+  </body>
+</html>
