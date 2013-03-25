@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html>
+<html manifest="/mobile/appcache.manifest">
   <head>
     <meta charset="utf-8">
     <title>Spending</title>
@@ -76,6 +76,13 @@
       <a class="button button-block">Submit</a>
     </form>
   </div>
+
+  <audio id="till">
+    <!-- AAC file (Chrome/Safari/IE9) -->
+    <source src="{{ STATIC_URL }}sounds/till_with_bell.m4a" type="audio/mpeg">
+    <!-- Ogg Vorbis (Firefox) -->
+    <source src="{{ STATIC_URL }}sounds/till_with_bell.ogg" type="audio/ogg">
+  </audio>
 
 <script src="{{ STATIC_URL }}js/libs/jquery-1.9.1.min.js"></script>
 <script src="{{ STATIC_URL }}js/libs/alertify.min.js"></script>

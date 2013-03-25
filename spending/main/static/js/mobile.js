@@ -161,6 +161,7 @@ $(function() {
             $('#home p.messages').removeClass('temphidden').hide();
             $('#home p.temphidden').removeClass('temphidden').fadeIn(500);
           }, 4* 1000);
+          $('#till')[0].play();
         }
         if (response.todays_date) {
           $('input[name="date"]').val(response.todays_date);

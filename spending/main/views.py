@@ -1,3 +1,5 @@
+import os
+import stat
 import json
 import datetime
 import locale
@@ -519,3 +521,20 @@ def mobile_auth(request):
     if request.user.is_authenticated():
         data['username'] = request.user.username
     return data
+
+
+def mobile_appcache(request):
+    data = {}
+    views_ts = os.stat(__file__)[stat.ST_MTIME]
+    tmpl_fs = os.path.join(
+        os.path.dirname(__file__),
+        'templates',
+        'appcache.html'
+    )
+    tmpl_ts = os.stat(tmpl_fs)[stat.ST_MTIME]
+    data['version'] = max(views_ts, tmpl_ts)
+
+    response = render(request, 'appcache.html', data)
+    response['Content-Type'] = 'text/cache-manifest'
+
+    return response
