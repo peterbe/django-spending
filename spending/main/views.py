@@ -394,7 +394,40 @@ def calendar(request):
         'total_rent_str': dollars(total_rent),
         'total_total_str': dollars(total_rent + total),
     })
+    #series = []
+    w_rent = []
+    wo_rent = []
+    total = []
+    for i, month in enumerate(months):
+        w_rent.append({
+            'x': i,
+            'y': float(month['amount_rent']),
+        })
+        wo_rent.append({
+            'x': i,
+            'y': float(month['amount']),
+        })
+        total.append({
+            'x': i,
+            'y': float(month['amount'] + month['amount_rent'])
+        })
 
+
+    data['series'] = [
+		{
+			'data': w_rent,
+			'color': '#4682b4',
+            'name': 'Rent',
+		}, {
+			'data': wo_rent,
+			'color': '#9cc1e0',
+            'name': 'Without rent',
+        }, {
+            'data': total,
+            'color': "#6060c0",
+            'name': "Total",
+	} ]
+    data['series'] = json.dumps(data['series'])
     return render(request, 'calendar.html', data)
 
 from django.db.models import Sum
