@@ -105,8 +105,19 @@ $(function() {
 
   var cat_select = $('select[name="category"]');
   if ($('option', cat_select).length <= 2) {
-    $.getJSON('/categories.json', function(response) {
-      update_categories(response.categories, cat_select);
+
+    $.ajax({
+       url:'/categories.json',
+      success: function(response) {
+        update_categories(response.categories, cat_select);
+        localStorage.setItem('spendingcategories', JSON.stringify(response.categories));
+      },
+      error: function(jqXHR, textStatus, errorThrown) {
+        var spendingcategories = localStorage.getItem('spendingcategories');
+        if (spendingcategories) {
+          update_categories(JSON.parse(spendingcategories), cat_select);
+        }
+      }
     });
   }
 
@@ -161,7 +172,7 @@ $(function() {
             $('#home p.messages').removeClass('temphidden').hide();
             $('#home p.temphidden').removeClass('temphidden').fadeIn(500);
           }, 4* 1000);
-          $('#till')[0].play();
+          document.getElementById('till').play();
         }
         if (response.todays_date) {
           $('input[name="date"]').val(response.todays_date);
@@ -196,15 +207,30 @@ $(function() {
     return false;
   });
 
-  $.getJSON('/mobile/auth/', function(response) {
-    if (response.csrf_token) {
-      $('#signin input[name="csrfmiddlewaretoken"]').val(response.csrf_token);
-    }
-    if (!response.username) {
-      change_panel('#signin');
-    } else {
-      $('.username').text(response.username);
-      change_panel('#home');
+  $('#home .username').hide();
+  $('#home .offline').show();
+  change_panel('#home');
+
+  $.ajax({
+     url: '/mobile/auth/',
+    cache: false,
+    success: function(response) {
+      if (response.csrf_token) {
+        $('#signin input[name="csrfmiddlewaretoken"]').val(response.csrf_token);
+      }
+      if (!response.username) {
+        change_panel('#signin');
+      } else {
+        $('#home .notloggedin').hide();
+        $('#home .offline').hide();
+        change_panel('#home');
+        $('#home .username b').text(response.username);
+        $('#home .username').fadeIn(500);
+      }
+    },
+    error: function(jqXHR, textStatus, errorThrown) {
+      $('#home .notloggedin').hide();
+      $('#home .offline').show();
     }
   });
 });
