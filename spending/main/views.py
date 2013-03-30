@@ -124,28 +124,51 @@ def expenses(request):
     month = int(request.GET.get('month', _now.month))
     year = int(request.GET.get('year', _now.year))
     first = datetime.datetime(year, month, 1, 0, 0, 0)
-    historic = 'month' in request.GET and 'year' in request.GET
+    historic = (
+        'month' in request.GET and 'year' in request.GET
+        or 'category' in request.GET
+    )
+    if request.GET.get('category'):
+        if request.GET.get('category').isdigit():
+            category = Category.objects.get(pk=request.GET['category'])
+        else:
+            category = Category.objects.get(name__iexact=request.GET['category'])
+    else:
+        category = None
+
     data = {
         'first': first,
         'poll': not historic,
+        'category': category,
     }
     return render(request, 'expenses.html', data)
 
 
 @login_required
 def expenses_json(request):
-    _now = datetime.datetime.utcnow()
-    month = int(request.GET.get('month', _now.month))
-    year = int(request.GET.get('year', _now.year))
-    first = datetime.datetime(year, month, 1, 0, 0, 0)
-    rows = []
     qs = Expense.objects.all().select_related()
-    if month == 12:
-        next = datetime.datetime(year + 1, 1, 1, 0, 0, 0)
-    else:
-        next = datetime.datetime(year, month + 1, 1, 0, 0, 0)
+    rows = []
 
-    qs = qs.filter(date__gte=first, date__lt=next)
+    if request.GET.get('category'):
+        if request.GET.get('category').isdigit():
+            category = Category.objects.get(pk=request.GET['category'])
+        else:
+            category = Category.objects.get(name__iexact=request.GET['category'])
+        qs = qs.filter(category=category)
+        date_format = '%A %d %b %Y'
+    else:
+        date_format = '%A %d'
+        _now = datetime.datetime.utcnow()
+        month = int(request.GET.get('month', _now.month))
+        year = int(request.GET.get('year', _now.year))
+        first = datetime.datetime(year, month, 1, 0, 0, 0)
+
+        if month == 12:
+            next = datetime.datetime(year + 1, 1, 1, 0, 0, 0)
+        else:
+            next = datetime.datetime(year, month + 1, 1, 0, 0, 0)
+
+        qs = qs.filter(date__gte=first, date__lt=next)
 
     if request.GET.get('latest'):
         latest = datetime.datetime.strptime(
@@ -158,9 +181,6 @@ def expenses_json(request):
         qs = qs.filter(added__gt=latest)
     else:
         latest = None
-    if request.GET.get('category'):
-        category = Category.objects.get(name__iexact=request.GET['category'])
-        qs = qs.filter(category=category)
     if request.GET.get('sort'):
         sort = request.GET.get('sort')
         if int(request.GET.get('reverse', 0)):
@@ -177,8 +197,9 @@ def expenses_json(request):
             'amount_string': dollars(expense.amount),
             'amount': round(float(expense.amount), 2),
             'user': expense.user.first_name or expense.user.username,
-            'date': expense.date.strftime('%A %d'),
+            'date': expense.date.strftime(date_format),
             'category': expense.category.name,
+            'category_id': expense.category.pk,
             'notes': expense.notes
         })
 
@@ -261,28 +282,29 @@ def charts(request):
 
 @login_required
 def charts_timeline(request):
+    first, = Expense.objects.all().order_by('date')[:1]
+    last, = Expense.objects.all().order_by('-date')[:1]
+    first = first.date
+    last = last.date
 
-    def get_series():
-        interval = datetime.timedelta(days=7)
-        first, = Expense.objects.all().order_by('date')[:1]
-        last, = Expense.objects.all().order_by('-date')[:1]
-        first = first.date
-        last = last.date
+    def get_series(date, interval):
 
-        #first = datetime.datetime(first.year, first.month, first.day)
-        #first = first.replace(tzinfo=utc)
-        #last = datetime.datetime(last.year, last.month, last.day)
-        #last = last.replace(tzinfo=utc)
-
-        date = first
+#        date = first
 
         points = defaultdict(list)
         cum_points = defaultdict(int)
         categories = [(x.pk, x.name) for x in
                       Category.objects.all()]
         _categories = dict(categories)
+
         while date < last:
-            next = date + interval
+            next = date
+            if interval:
+                next = date + interval
+            else:
+                # monthly increment
+                while next.month == date.month:
+                    next += datetime.timedelta(days=1)
             counts = defaultdict(int)
             for expense in (Expense.objects
                          .filter(date__gte=date,
@@ -292,19 +314,22 @@ def charts_timeline(request):
             for category_id, name in categories:
                 count = counts[category_id]
                 points[name].append((date, count))
-
             date = next
-
-
 
         colors = ColorPump()
         series = []
 
+        def make_ts(d):
+            return int(time.mktime(d.timetuple()))
+
         _totals = {}
+        _colors = set()
         for name, data in points.iteritems():
             _totals[name] = sum(x[1] for x in data)
+            color = _get_next_color(name, colors, _colors)
+            _colors.add(color)
             series.append({
-              'color': _get_next_color(name, colors),
+              'color': color,
               'name': name,
               'data': [{'x': int(time.mktime(a.timetuple())), 'y': b} for (a, b) in data],
             })
@@ -313,17 +338,41 @@ def charts_timeline(request):
             lambda x, y: cmp(_totals[x['name']], _totals[y['name']]),
             reverse=True
         )
+
+        rest = series[5:]
+        series = series[:5]
+        # let's merge the rest into one
+
+        first = rest[0]
+        data = []
+        for each in first['data']:
+            T = 0
+            for other in rest:
+                T += sum(items['y'] for items in other['data']
+                        if items['x'] == each['x'])
+            data.append({'x': each['x'], 'y': T})
+
+        series.append({
+            'color': _get_next_color('All Other', colors, _colors),
+            'name': 'ALL OTHER',
+            'data': data
+        })
+
         return series
 
-    data = {'data': get_series()}
+    #interval = datetime.timedelta(days=7)
+    interval = None
+    data = {'data': get_series(first, interval)}
 
     return http.HttpResponse(json.dumps(data), mimetype="application/json")
 
-def _get_next_color(name, colorpump):
+def _get_next_color(name, colorpump, used_colors):
     cache_key = 'timeline-%s' % slugify(name)
     color = cache.get(cache_key)
     if color is None:
         color = colorpump.next()
+        while color in used_colors:
+            color = colorpump.next()
         cache.set(cache_key, color, 60 * 60)
     return color
 

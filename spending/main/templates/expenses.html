@@ -8,7 +8,11 @@
 {% endblock %}
 
 {% block main %}
+{% if category %}
+<h3>All expenses for <i>{{ category.name }}</i></h3>
+{% else %}
 <h3>{{ first|date:"F Y" }}</h3>
+{% endif %}
 <table id="expenses" class="table table-condensed"
        data-poll="{% if poll %}true{% else %}false{% endif %}"
        >
@@ -68,7 +72,10 @@ function add_rows(rows, highlight) {
       .appendTo($tr);
     $('<td>').text(each.user).appendTo($tr);
     $('<td>').text(each.date).appendTo($tr);
-    $('<td>').text(each.category).appendTo($tr);
+    $('<td>')
+      .append($('<a>')
+        .attr('href', '?category=' + each.category_id)
+        .text(each.category)).appendTo($tr);
     $('<td>').text(each.notes).appendTo($tr);
     $tr.appendTo(mom);
     total += each.amount;

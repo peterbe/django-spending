@@ -14,7 +14,7 @@
 {% for each in categories %}
   <tr>
     <td><a href="{% url 'category' each.pk %}">{{ each.name }}</a></td>
-    <td>{{ each.count }}</td>
+    <td><a href="{% url 'expenses' %}?category={{ each.pk }}">{{ each.count }}</a></td>
     <td>{{ each.total_str }}</td>
   </tr>
 {% endfor %}

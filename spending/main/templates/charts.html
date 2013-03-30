@@ -5,21 +5,23 @@
 <link href="{{ STATIC_URL }}rickshaw/rickshaw.min.css" rel="stylesheet" type="text/css">
 
 <style>
+.legend {
+  float:right;
+}
+
 </style>
 {% endblock %}
 
 {% block main %}
 
   <div id="timeline">
-    <h2 class="grid_12">Timeline</h2>
+    <h3>Timeline</h3>
 
-    <div class="grid_8 alpha graph-container">
-      <div class="graph" style="height:350px"></div>
-     </div>
-
-    <div class="grid_4 omega">
-      <div class="legend"></div>
+    <div class="legend"></div>
+    <div class="alpha graph-container">
+      <div class="graph" style="height:350px;width:70%;"></div>
     </div>
+
   </div>
 
 {% endblock %}
@@ -31,10 +33,11 @@
 <script>
   var $timeline = $('#timeline');
 
+  var url = '/charts/timeline/';
   var graph = new Rickshaw.Graph.Ajax({
     element: $timeline.find('.graph')[0],
-    //renderer: 'bar',
-    dataURL: '/charts/timeline/',
+    renderer: 'bar',
+    dataURL: url,
     onData: function(d) {
       return d.data;
     },
