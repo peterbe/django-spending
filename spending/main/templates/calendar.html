@@ -1,5 +1,6 @@
 {% extends "base.html" %}
 {% load url from future %}
+{% load spending %}
 
 {% block extrahead %}
 <link href="{{ STATIC_URL }}jquery-ui/css/ui-lightness/jquery-ui-1.10.1.custom.min.css" rel="stylesheet" type="text/css">
@@ -23,6 +24,8 @@
 	float: left;
 	position: relative;
 }
+
+td small { margin-left: 5px; }
 </style>
 {% endblock %}
 
@@ -47,9 +50,21 @@
 {% for each in months %}
   <tr>
     <td><a href="{% url 'expenses' %}?month={{ each.month }}&amp;year={{ each.year }}">{{ each.date }}</a></td>
-    <td>{{ each.amount_str }}</td>
-    <td>{{ each.amount_rent_str }}</td>
-    <td>{{ each.amount_total_str }}</td>
+    <td>{{ each.amount_str }}
+      {% if each.amount_diff_str %}
+      <small>({{ each.amount_diff|delta }}{{ each.amount_diff_str }})</small>
+      {% endif %}
+    </td>
+    <td>{{ each.amount_rent_str }}
+      {% if each.amount_rent_diff_str %}
+      <small>({{ each.amount_diff|delta }}{{ each.amount_rent_diff_str }})</small>
+      {% endif %}
+    </td>
+    <td>{{ each.amount_total_str }}
+      {% if each.amount_total_diff_str %}
+      <small>({{ each.amount_diff|delta }}{{ each.amount_total_diff_str }})</small>
+      {% endif %}
+    </td>
   </tr>
 {% endfor %}
 </table>

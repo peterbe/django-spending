@@ -409,6 +409,19 @@ def calendar(request):
             month = date.strftime('%B %Y')
             # new month
             if bucket:
+                if months:
+                    last = months[-1]
+                    print "COMPARE"
+                    print last
+
+                    print "WITH"
+                    print bucket
+                    bucket['amount_rent_diff'] = (
+                        bucket['amount_rent'] - last['amount_rent']
+                    )
+                    bucket['amount_diff'] = (
+                        bucket['amount'] - last['amount']
+                    )
                 months.append(bucket)
             bucket = {
                 'date': month,
@@ -435,6 +448,13 @@ def calendar(request):
         each['amount_total_str'] = dollars(
             each['amount_rent'] + each['amount']
         )
+        if 'amount_rent_diff' in each and 'amount_diff' in each:
+            each['amount_rent_diff_str'] = dollars(each['amount_rent_diff'])
+            each['amount_diff_str'] = dollars(each['amount_diff'])
+            each['amount_total_diff'] = (
+                each['amount_diff'] + each['amount_rent_diff']
+            )
+            each['amount_total_diff_str'] = dollars(each['amount_total_diff'])
 
     data = {
         'months': months,

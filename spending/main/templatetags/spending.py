@@ -19,3 +19,10 @@ def sort_header_url(context, name, **kwargs):
     parsed['reverse'] = reverse
     back = urllib.urlencode(parsed, True)
     return '?%s' % back
+
+
+@register.filter
+def delta(value):
+    if value > 0:
+        return "increased "
+    return "decreased "
