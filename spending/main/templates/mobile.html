@@ -30,7 +30,11 @@
           color: #555;
         }
         input.missing, select.missing { border:1px solid red; }
-        .content { display: none; }
+        .content,
+        .temphidden,
+        .messages {
+          display: none;
+        }
     </style>
 
   </head>
@@ -47,7 +51,6 @@
     <form action="" class="content-padded expense-entry">
       <input type="number" name="amount" placeholder="Amount">
       <input type="date" id="id_date" name="date" placeholder="Date">
-      <!--<textarea rows="3" name="notes" placeholder="Notes"></textarea>-->
       <input type="text" name="notes" placeholder="Notes">
       <select name="category">
       <option value="">Category</option>
@@ -55,15 +58,14 @@
       </select>
       <input type="text" placeholder="Other category" name="other_category">
       <a class="button button-block">Submit</a>
-<!--    <p>
-      <a href="#signin" class="panel-change">Sign-in</a>
-    </p>
--->
+
       <p class="username">Logged in as <b></b></p>
+
       <p class="notloggedin">Currently <b>not logged in</b></p>
+
       <p class="offline">Currently in <b>offline mode</b></p>
-      <p class="messages" style="display:none">
-      </p>
+
+      <p class="messages"></p>
     </form>
 
     <audio id="till">

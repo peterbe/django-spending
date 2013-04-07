@@ -166,12 +166,13 @@ $(function() {
         })
       } else {
         if (response.success_message) {
-          $('#home p').addClass('temphidden').hide();
-          $('#home p.messages').text(response.success_message).fadeIn(500);
+          var container = $('#home');
+          $('p:visible', container).addClass('temphidden').hide();
+          $('p.messages', container).text(response.success_message).fadeIn(500);
           setTimeout(function() {
-            $('#home p.messages').removeClass('temphidden').hide();
-            $('#home p.temphidden').removeClass('temphidden').fadeIn(500);
-          }, 4* 1000);
+            $('p.messages', container).removeClass('temphidden').hide();
+            $('p.temphidden', container).removeClass('temphidden').fadeIn(500);
+          }, 10 * 1000);
           document.getElementById('till').play();
         }
         if (response.todays_date) {

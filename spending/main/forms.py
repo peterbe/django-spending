@@ -1,3 +1,4 @@
+import datetime
 from django import forms
 from .models import Expense, Category
 
@@ -36,11 +37,11 @@ class MobileExpenseForm(forms.ModelForm):
         self.fields['category'].required = False
         self.fields['date'].required = False
 
-#    def clean(self):
-#        data = super(MobileExpenseForm, self).clean()
-#        if not data.get('category') and data.get('other_category'):
-#            data['category'] = data['other_category']
-#        return data
+    def clean_date(self):
+        value = self.cleaned_data['date']
+        if not value:
+            value = datetime.datetime.utcnow().date()
+        return value
 
 
 class CategoryForm(forms.ModelForm):
