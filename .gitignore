@@ -1,2 +1,3 @@
 *.pyc
 spending/local_settings.py
+spending.sql

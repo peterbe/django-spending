@@ -15,6 +15,7 @@ from django.views.decorators.csrf import csrf_exempt
 from django.db import transaction
 from django.core.cache import cache
 from django.contrib import messages
+from django.db.models import Sum
 from django.template.loader import get_template
 from django.template import Context
 from django.contrib.auth.decorators import login_required
@@ -411,11 +412,6 @@ def calendar(request):
             if bucket:
                 if months:
                     last = months[-1]
-                    print "COMPARE"
-                    print last
-
-                    print "WITH"
-                    print bucket
                     bucket['amount_rent_diff'] = (
                         bucket['amount_rent'] - last['amount_rent']
                     )
@@ -501,7 +497,6 @@ def calendar(request):
     data['series'] = json.dumps(data['series'])
     return render(request, 'calendar.html', data)
 
-from django.db.models import Sum
 
 @login_required
 def categories(request):
@@ -607,3 +602,88 @@ def mobile_appcache(request):
     response['Content-Type'] = 'text/cache-manifest'
 
     return response
+
+
+@json_view
+def compare_months(request, year, month):
+    date = datetime.date(int(year), int(month), 1)
+    previous = date - datetime.timedelta(days=1)
+    previous = previous.replace(day=1)
+
+    if request.GET.get('without'):
+        without = Category.objects.get(name__iexact=request.GET['without'])
+    else:
+        without = None
+
+    if (
+        request.META.get('HTTP_X_REQUESTED_WITH') == 'XMLHttpRequest'
+        or
+        request.GET.get('format') == 'json'
+    ):
+        data = [
+            ['Category', previous.strftime('%B'), date.strftime('%B')],
+        ]
+
+        base_qs = Expense.objects
+        if without:
+            base_qs = base_qs.exclude(category=without)
+
+        categories = defaultdict(dict)
+        category_sums = defaultdict(Decimal)
+
+        for each in (previous, date):
+            qs = (
+                base_qs
+                .filter(date__month=each.month, date__year=each.year)
+                .values('category_id')
+                .annotate(total=Sum('amount'))
+            )
+            for e in qs:
+                categories[e['category_id']][each] = e['total']
+                category_sums[e['category_id']] += e['total']
+
+        #pprint(dict(categories))
+
+        sums = sorted((v, k) for (k, v) in category_sums.items())
+        sums.reverse()
+        category_names = {}
+        category_ids = [x[1] for x in sums]
+        for each in Category.objects.filter(id__in=category_ids):
+            category_names[each.pk] = each.name
+
+        for category_id in category_ids:
+            amount_previous = categories[category_id].get(previous, Decimal('0.0'))
+            amount_date = categories[category_id].get(date, Decimal('0.0'))
+            data.append([
+                category_names[category_id],
+                round(float(amount_previous), 2),
+                round(float(amount_date), 2),
+            ])
+
+        return {'data': data}
+
+    if date.year == previous.year:
+        page_title = (
+            "Compare %s with %s %s"
+            % (previous.strftime('%B'),
+               date.strftime('%B'),
+               date.strftime('%Y'))
+        )
+    else:
+        page_title = (
+            "Compare %s %s with %s %s"
+            % (previous.strftime('%B'),
+               previous.strftime('%Y'),
+               date.strftime('%B'),
+               date.strftime('%Y'))
+        )
+
+    if without:
+        page_title += ' (without %s)' % without.name
+
+    data = {
+        'date': date,
+        'previous': previous,
+        'page_title': page_title,
+    }
+    return render(request, 'compare_months.html', data)

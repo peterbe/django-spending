@@ -52,7 +52,8 @@ td small { margin-left: 5px; }
     <td><a href="{% url 'expenses' %}?month={{ each.month }}&amp;year={{ each.year }}">{{ each.date }}</a></td>
     <td>{{ each.amount_str }}
       {% if each.amount_diff_str %}
-      <small>({{ each.amount_diff|delta }}{{ each.amount_diff_str }})</small>
+      <small>({{ each.amount_diff|delta }}{{ each.amount_diff_str }}
+      <a href="{% url 'compare_months' each.year each.month %}?without=rent">compare</a>)</small>
       {% endif %}
     </td>
     <td>{{ each.amount_rent_str }}
@@ -62,7 +63,8 @@ td small { margin-left: 5px; }
     </td>
     <td>{{ each.amount_total_str }}
       {% if each.amount_total_diff_str %}
-      <small>({{ each.amount_diff|delta }}{{ each.amount_total_diff_str }})</small>
+      <small>({{ each.amount_diff|delta }}{{ each.amount_total_diff_str }}
+      <a href="{% url 'compare_months' each.year each.month %}">compare</a>)</small>
       {% endif %}
     </td>
   </tr>
