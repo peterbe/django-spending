@@ -184,6 +184,9 @@ def expenses_json(request):
         latest = None
     if request.GET.get('sort'):
         sort = request.GET.get('sort')
+        if sort == 'category':
+            sort = 'category__name'
+
         if int(request.GET.get('reverse', 0)):
             sort = '-%s' % sort
     else:
