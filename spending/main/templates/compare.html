@@ -1,0 +1,124 @@
+{% extends "base.html" %}
+{% load url from future %}
+{% load spending_tags %}
+{% block title %}{{ page_title }}{% endblock %}
+
+{% block extrahead %}
+<style>
+#sidebar {
+    border-left: 1px solid #ccc;
+    float: right;
+    width: 25%;
+    padding: 10px;
+}
+#sidebar .group {
+    margin-bottom: 10px;
+}
+#sidebar label.checkbox {
+    margin-bottom: 1px;
+}
+#sidebar .toggles {
+    float: right;
+}
+#sidebar .toggles a:link {
+    font-size: 0.8em;
+    text-decoration: dotted;
+    border-bottom:1px dotted;
+    margin-right: 5px;
+
+}
+#sidebar label small {
+    color: #666;
+    float: right;
+}
+</style>
+{% endblock %}
+
+{% block main %}
+
+<form id="sidebar">
+
+<div class="group">
+  <div class="toggles">
+    <a href="#" class="toggle-check">Check all</a>
+    <a href="#" class="toggle-uncheck">Uncheck all</a>
+  </div>
+
+  <label>Months</label>
+  {% for month in all_months %}
+  <label class="checkbox">
+    <input type="checkbox" name="m" value="{{ month.key }}"
+    {% if month.checked %}checked{% endif %}
+    > {{ month.label }} <small>{{ month.count }} expenses</small>
+  </label>
+  {% endfor %}
+</div>
+
+<div class="group">
+
+  <div class="toggles">
+    <a href="#" class="toggle-check">Check all</a>
+    <a href="#" class="toggle-uncheck">Uncheck all</a>
+  </div>
+
+  <label>Categories</label>
+  {% for category in all_categories %}
+  <label class="checkbox">
+    <input type="checkbox" name="c" value="{{ category.pk }}"
+    {% if category.checked %}checked{% endif %}
+    > {{ category.name }}
+    <small>{{ category.total_str }} in total</small>
+  </label>
+  {% endfor %}
+</div>
+<button class="btn btn-large btn-block disabled" type="button">
+  <img class="loading" src="{{ STATIC_URL }}images/loading.png" alt="Loading" style="display:none">
+  Update
+</button>
+</form>
+
+<h2>{{ page_title }}</h2>
+<p class="not-ready" style="display:none">Select at least one from each category</p>
+<p class="too-few-rows" style="display:none">Not enough data to display a graph</p>
+
+<div id="chart_div" style="width: 70%; height: 500px;" class="unloaded">
+  <!--<p>Select from the filters...</p>-->
+</div>
+
+{% endblock %}
+
+
+{% block extrajs %}
+
+<script type="text/javascript" src="https://www.google.com/jsapi"></script>
+<script type="text/javascript" src="{{ STATIC_URL }}js/compare.js"></script>
+
+{% comment %}
+<script type="text/javascript" src="https://www.google.com/jsapi"></script>
+<script type="text/javascript">
+  google.load("visualization", "1", {packages:["corechart"]});
+  google.setOnLoadCallback(loadChart);
+
+  /*
+  function loadChart() {
+    $.getJSON(location.href, function(response) {
+      $('.unloaded').removeClass('unloaded');
+      drawChart(response.data);
+    });
+  }
+  */
+
+  function drawChart(data) {
+    var data = google.visualization.arrayToDataTable(data);
+
+    var options = {
+      title: 'Comparing ',
+      hAxis: {title: 'Categories'}
+    };
+
+    var chart = new google.visualization.ColumnChart(document.getElementById('chart_div'));
+    chart.draw(data, options);
+  }
+</script>
+{% endcomment %}
+{% endblock %}

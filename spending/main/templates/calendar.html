@@ -1,6 +1,6 @@
 {% extends "base.html" %}
 {% load url from future %}
-{% load spending %}
+{% load spending_tags %}
 
 {% block extrahead %}
 <link href="{{ STATIC_URL }}jquery-ui/css/ui-lightness/jquery-ui-1.10.1.custom.min.css" rel="stylesheet" type="text/css">
@@ -53,7 +53,7 @@ td small { margin-left: 5px; }
     <td>{{ each.amount_str }}
       {% if each.amount_diff_str %}
       <small>({{ each.amount_diff|delta }}{{ each.amount_diff_str }}
-      <a href="{% url 'compare_months' each.year each.month %}?without=rent">compare</a>)</small>
+      <a href="{% compare_url each.year each.month 'yes' %}">compare</a>)</small>
       {% endif %}
     </td>
     <td>{{ each.amount_rent_str }}
@@ -64,7 +64,7 @@ td small { margin-left: 5px; }
     <td>{{ each.amount_total_str }}
       {% if each.amount_total_diff_str %}
       <small>({{ each.amount_diff|delta }}{{ each.amount_total_diff_str }}
-      <a href="{% url 'compare_months' each.year each.month %}">compare</a>)</small>
+      <a href="{% compare_url each.year each.month %}">compare</a>)</small>
       {% endif %}
     </td>
   </tr>

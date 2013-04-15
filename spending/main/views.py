@@ -607,34 +607,46 @@ def mobile_appcache(request):
     return response
 
 
+@login_required
 @json_view
-def compare_months(request, year, month):
-    date = datetime.date(int(year), int(month), 1)
-    previous = date - datetime.timedelta(days=1)
-    previous = previous.replace(day=1)
+def compare(request):
 
-    if request.GET.get('without'):
-        without = Category.objects.get(name__iexact=request.GET['without'])
-    else:
-        without = None
+    _category_ids = []
+    for c in request.GET.get('c', '').split(','):
+        if not c:
+            continue
+        _category_ids.append(int(c))
+    _categories = Category.objects.filter(id__in=_category_ids)
+
+    dates = []
+    for m in request.GET.get('m', '').split(','):
+        if not m:
+            continue
+        month, year = [int(x) for x in m.split(':')]
+        dates.append(datetime.date(year, month, 1))
 
     if (
         request.META.get('HTTP_X_REQUESTED_WITH') == 'XMLHttpRequest'
         or
         request.GET.get('format') == 'json'
     ):
-        data = [
-            ['Category', previous.strftime('%B'), date.strftime('%B')],
-        ]
+
+        head = ['Category']
+        for date in dates:
+            head.append(date.strftime('%B %Y'))
+
+        data = [head]
 
         base_qs = Expense.objects
-        if without:
-            base_qs = base_qs.exclude(category=without)
+        base_qs = base_qs.filter(category__in=_categories)
+
+        #if without:
+        #    base_qs = base_qs.exclude(category=without)
 
         categories = defaultdict(dict)
         category_sums = defaultdict(Decimal)
 
-        for each in (previous, date):
+        for each in dates:
             qs = (
                 base_qs
                 .filter(date__month=each.month, date__year=each.year)
@@ -645,8 +657,6 @@ def compare_months(request, year, month):
                 categories[e['category_id']][each] = e['total']
                 category_sums[e['category_id']] += e['total']
 
-        #pprint(dict(categories))
-
         sums = sorted((v, k) for (k, v) in category_sums.items())
         sums.reverse()
         category_names = {}
@@ -655,38 +665,53 @@ def compare_months(request, year, month):
             category_names[each.pk] = each.name
 
         for category_id in category_ids:
-            amount_previous = categories[category_id].get(previous, Decimal('0.0'))
-            amount_date = categories[category_id].get(date, Decimal('0.0'))
-            data.append([
-                category_names[category_id],
-                round(float(amount_previous), 2),
-                round(float(amount_date), 2),
-            ])
+            row = [category_names[category_id]]
+            for date in dates:
+                amount = categories[category_id].get(date, Decimal('0.0'))
+                row.append(round(float(amount), 2))
+            data.append(row)
 
-        return {'data': data}
+        return {'data': data, 'title': None, 'rowcount': len(category_ids)}
 
-    if date.year == previous.year:
-        page_title = (
-            "Compare %s with %s %s"
-            % (previous.strftime('%B'),
-               date.strftime('%B'),
-               date.strftime('%Y'))
+    all_months = []
+    first, = Expense.objects.all().values('date').order_by('date')[:1]
+    date = first['date']
+    today = datetime.date.today()
+    while date < today:
+        next = date
+        while next.month == date.month:
+            next += datetime.timedelta(days=1)
+        count = (
+            Expense.objects
+            .filter(date__year=date.year, date__month=date.month)
+            .count()
         )
-    else:
-        page_title = (
-            "Compare %s %s with %s %s"
-            % (previous.strftime('%B'),
-               previous.strftime('%Y'),
-               date.strftime('%B'),
-               date.strftime('%Y'))
-        )
+        checked = date in dates
+        all_months.append({
+            'key': date.strftime('%m:%Y'),
+            'label': date.strftime('%B %Y'),
+            'count': count,
+            'checked': checked,
+        })
+        date = next
 
-    if without:
-        page_title += ' (without %s)' % without.name
+    all_categories = []
+    for category in Category.objects.all().order_by('name'):
+        category.checked = category in _categories
+        total = (
+            Expense.objects
+            .filter(category=category)
+            .aggregate(Sum('amount'))
+        )
+        total = total['amount__sum']
+        category.total_str = dollars(total)
+        all_categories.append(category)
+
+    page_title = 'Compare months'
 
     data = {
-        'date': date,
-        'previous': previous,
         'page_title': page_title,
+        'all_categories': all_categories,
+        'all_months': all_months,
     }
-    return render(request, 'compare_months.html', data)
+    return render(request, 'compare.html', data)

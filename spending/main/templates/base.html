@@ -62,6 +62,7 @@
                 <li {% if current_url == '/expenses/' %}class="active"{% endif %}><a href="{% url 'expenses' %}">Expenses</a></li>
                 <li {% if current_url == '/calendar/' %}class="active"{% endif %}><a href="{% url 'calendar' %}">Calendar</a></li>
                 <li {% if current_url == '/charts/' %}class="active"{% endif %}><a href="{% url 'charts' %}">Charts</a></li>
+                <li {% if current_url == '/compare/' %}class="active"{% endif %}><a href="{% url 'compare' %}">Compare</a></li>
                 <li {% if current_url == '/categories/' %}class="active"{% endif %}><a href="{% url 'categories' %}">Categories</a></li>
             </ul>
             {% else %}
