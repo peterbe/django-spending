@@ -63,8 +63,10 @@ function validate_form($form) {
   }
 
   // check date
+  /*
   var $date = $('input[name="date"]');
   var date = $date.val();
+
   if (!date) {
     $date
       .addClass('missing')
@@ -72,6 +74,7 @@ function validate_form($form) {
           $(this).removeClass('missing');
         });
   }
+  */
 
   return !errors;
 }
