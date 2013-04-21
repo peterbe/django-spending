@@ -6,8 +6,8 @@ function initialize() {
 }
 */
 
-function drawChart(data, title) {
-  var data = google.visualization.arrayToDataTable(data);
+function drawChart(source_data, title) {
+  var data = google.visualization.arrayToDataTable(source_data);
 
   var options = {
     title: title
@@ -19,6 +19,20 @@ function drawChart(data, title) {
 
   var chart = new google.visualization.ColumnChart(document.getElementById('chart_div'));
   chart.draw(data, options);
+
+  google.visualization.events.addListener(chart, 'select', function() {
+    var selection = chart.getSelection()[0];
+    console.log(selection);
+    console.log(source_data);
+    var month = source_data[0][selection.column];
+    //var month = source_data[0][1];
+    var category = source_data[selection.row][0];
+    console.log(month, category);
+    var search_url = $('.search a').attr('href');
+    search_url = search_url.split('?')[0];
+    $('.search a').attr('href', search_url + '?month=' + encodeURIComponent(month) + '&category=' + encodeURIComponent(category));
+    $('.search').show();
+  });
 }
 
 $(function() {

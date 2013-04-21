@@ -77,14 +77,16 @@
 </button>
 </form>
 
-<h2>{{ page_title }}</h2>
+<h3>{{ page_title }}</h3>
 <p class="not-ready" style="display:none">Select at least one from each category</p>
 <p class="too-few-rows" style="display:none">Not enough data to display a graph</p>
 
 <div id="chart_div" style="width: 70%; height: 500px;" class="unloaded">
   <!--<p>Select from the filters...</p>-->
 </div>
-
+<p class="search" style="display:none">
+  <a href="{% url 'expenses' %}">Show all of these expenses</a>
+</p>
 {% endblock %}
 
 

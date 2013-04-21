@@ -107,21 +107,26 @@ $(function() {
   }
 
   var cat_select = $('select[name="category"]');
-  if ($('option', cat_select).length <= 2) {
 
-    $.ajax({
-       url:'/categories.json',
-      success: function(response) {
-        update_categories(response.categories, cat_select);
-        localStorage.setItem('spendingcategories', JSON.stringify(response.categories));
-      },
-      error: function(jqXHR, textStatus, errorThrown) {
-        var spendingcategories = localStorage.getItem('spendingcategories');
-        if (spendingcategories) {
-          update_categories(JSON.parse(spendingcategories), cat_select);
+  if ($('option', cat_select).length <= 2) {
+    if (localStorage.getItem('spendingcategories')) {
+      var spendingcategories = localStorage.getItem('spendingcategories');
+      update_categories(JSON.parse(spendingcategories), cat_select);
+    } else {
+      $.ajax({
+         url:'/categories.json',
+        success: function(response) {
+          update_categories(response.categories, cat_select);
+          localStorage.setItem('spendingcategories', JSON.stringify(response.categories));
+        },
+        error: function(jqXHR, textStatus, errorThrown) {
+          var spendingcategories = localStorage.getItem('spendingcategories');
+          if (spendingcategories) {
+            update_categories(JSON.parse(spendingcategories), cat_select);
+          }
         }
-      }
-    });
+      });
+    }
   }
 
   $('select[name="category"]').change(function() {

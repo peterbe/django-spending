@@ -1,3 +1,4 @@
+import re
 import os
 import stat
 import json
@@ -119,16 +120,29 @@ def categories_json(request):
     return http.HttpResponse(json.dumps(result), mimetype="application/json")
 
 
+MONTH_NAMES = [
+    datetime.datetime(2013, x, 1).strftime('%B')
+    for x in range(1, 13)
+]
+FULL_MONTH_REGEX = re.compile('(%s) (\d{4})' % '|'.join(MONTH_NAMES))
+
 @login_required
 def expenses(request):
     _now = datetime.datetime.utcnow()
-    month = int(request.GET.get('month', _now.month))
-    year = int(request.GET.get('year', _now.year))
+    historic = 'category' in request.GET
+    if request.GET.get('month') and FULL_MONTH_REGEX.findall(request.GET.get('month')):
+        month, year = FULL_MONTH_REGEX.findall(request.GET.get('month'))[0]
+        year = int(year)
+        month = MONTH_NAMES.index(month) + 1
+        historic = True
+    else:
+        month = int(request.GET.get('month', _now.month))
+        year = int(request.GET.get('year', _now.year))
+        if 'month' in request.GET and 'year' in request.GET:
+            historic = True
+
     first = datetime.datetime(year, month, 1, 0, 0, 0)
-    historic = (
-        'month' in request.GET and 'year' in request.GET
-        or 'category' in request.GET
-    )
+
     if request.GET.get('category'):
         if request.GET.get('category').isdigit():
             category = Category.objects.get(pk=request.GET['category'])
@@ -141,6 +155,8 @@ def expenses(request):
         'first': first,
         'poll': not historic,
         'category': category,
+        'month': month,
+        'year': year,
     }
     return render(request, 'expenses.html', data)
 
