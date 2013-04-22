@@ -54,6 +54,8 @@ td small { margin-left: 5px; }
       {% if each.amount_diff_str %}
       <small>({{ each.amount_diff|delta }}{{ each.amount_diff_str }}
       <a href="{% compare_url each.year each.month 'yes' %}">compare</a>)</small>
+      {% elif each.amount_projected_str %}
+      <small>(projected estimate: {{ each.amount_projected_str  }})</small>
       {% endif %}
     </td>
     <td>{{ each.amount_rent_str }}
@@ -65,6 +67,8 @@ td small { margin-left: 5px; }
       {% if each.amount_total_diff_str %}
       <small>({{ each.amount_diff|delta }}{{ each.amount_total_diff_str }}
       <a href="{% compare_url each.year each.month %}">compare</a>)</small>
+      {% elif each.amount_total_projected_str %}
+      <small>(projected estimate: {{ each.amount_total_projected_str }})</small>
       {% endif %}
     </td>
   </tr>

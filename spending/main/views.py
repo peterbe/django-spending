@@ -408,7 +408,9 @@ def calendar(request):
     qs = qs.values_list('amount', 'date', 'category_id')
     rent = Category.objects.get(name__iexact='Rent')
     bucket = {}
+    last_date = None
     for amount, date, category_id in qs:
+        print date
         if date.strftime('%B %Y') != month:
             month = date.strftime('%B %Y')
             # new month
@@ -433,8 +435,58 @@ def calendar(request):
             bucket['amount_rent'] += amount
         else:
             bucket['amount'] += amount
+        last_date = date
 
     if bucket:
+
+        # over the last 90 days, how much do we spend per month?
+        DAYS_BACK_PROJECTION = 60  # 90 instead??
+        now = datetime.datetime.utcnow()
+        then = now - datetime.timedelta(days=DAYS_BACK_PROJECTION)
+
+        if Expense.objects.filter(date__lt=then).count():
+            _query = (
+                Expense.objects
+                .filter(date__gte=then)
+                .exclude(category=rent)
+            )
+            total_past = _query.aggregate(Sum('amount'))['amount__sum']
+            per_day = total_past / DAYS_BACK_PROJECTION
+            days_left = 0
+            while last_date.month == bucket['month']:
+                days_left += 1
+                last_date += datetime.timedelta(days=1)
+            days_left -= 1  # so it doesn't include the first of next month
+
+            remaining = per_day * days_left
+            bucket['amount_projected'] = bucket['amount'] + remaining
+            # for the amount_total_projected, do the same but include the
+            # rent (of last month) if it hasn't already been paid
+            bucket['amount_total_projected'] = bucket['amount_projected']
+            rents_this_month = (
+                Expense.objects
+                .filter(date__month=bucket['month'],
+                        date__year=bucket['year'],
+                        category=rent)
+            )
+            if not rents_this_month.count():
+                last_month, last_year = bucket['month'], bucket['year']
+                if last_month == 1:
+                    last_month = 12
+                    last_year -= 1
+                else:
+                    last_month -= 1
+
+                rents_last_month = (
+                    Expense.objects
+                    .filter(date__month=last_month,
+                            date__year=last_year,
+                            category=rent)
+                )
+                bucket['amount_total_projected'] += (
+                    rents_last_month.aggregate(Sum('amount'))['amount__sum']
+                )
+
         months.append(bucket)
 
     total = total_rent = Decimal('0.0')
@@ -454,6 +506,16 @@ def calendar(request):
                 each['amount_diff'] + each['amount_rent_diff']
             )
             each['amount_total_diff_str'] = dollars(each['amount_total_diff'])
+
+        if 'amount_projected' in each:
+            each['amount_projected_str'] = dollars(each['amount_projected'])
+        else:
+            each['amount_projected_str'] = None
+
+        if 'amount_total_projected' in each:
+            each['amount_total_projected_str'] = dollars(each['amount_total_projected'])
+        else:
+            each['amount_total_projected_str'] = None
 
     data = {
         'months': months,
