@@ -6,6 +6,7 @@ import datetime
 import locale
 import time
 import random
+import urllib
 from decimal import Decimal
 from collections import defaultdict
 from pprint import pprint
@@ -134,12 +135,18 @@ def expenses(request):
         month, year = FULL_MONTH_REGEX.findall(request.GET.get('month'))[0]
         year = int(year)
         month = MONTH_NAMES.index(month) + 1
+        print request.META.get('QUERY_STRING')
+        new_qs = {
+            'month': month,
+            'year': year,
+        }
+        if request.GET.get('category'):
+            new_qs['category'] = request.GET.get('category')
+        return redirect(reverse('expenses') + '?' + urllib.urlencode(new_qs))
+    month = int(request.GET.get('month', _now.month))
+    year = int(request.GET.get('year', _now.year))
+    if 'month' in request.GET and 'year' in request.GET:
         historic = True
-    else:
-        month = int(request.GET.get('month', _now.month))
-        year = int(request.GET.get('year', _now.year))
-        if 'month' in request.GET and 'year' in request.GET:
-            historic = True
 
     first = datetime.datetime(year, month, 1, 0, 0, 0)
 
@@ -166,6 +173,21 @@ def expenses_json(request):
     qs = Expense.objects.all().select_related()
     rows = []
 
+    date_format = '%A %d'
+    _now = datetime.datetime.utcnow()
+    month = int(request.GET.get('month', _now.month))
+    year = int(request.GET.get('year', _now.year))
+
+    # only do this if no category is specified or if a year and month is set
+    if ('month' in request.GET and 'year' in request.GET) or not request.GET.get('category'):
+        #first = datetime.datetime(year, month, 1, 0, 0, 0)
+        #if month == 12:
+        #    next = datetime.datetime(year + 1, 1, 1, 0, 0, 0)
+        #else:
+        #    next = datetime.datetime(year, month + 1, 1, 0, 0, 0)
+        #qs = qs.filter(date__gte=first, date__lt=next)
+        qs = qs.filter(date__month=month, date__year=year)
+
     if request.GET.get('category'):
         if request.GET.get('category').isdigit():
             category = Category.objects.get(pk=request.GET['category'])
@@ -173,19 +195,6 @@ def expenses_json(request):
             category = Category.objects.get(name__iexact=request.GET['category'])
         qs = qs.filter(category=category)
         date_format = '%A %d %b %Y'
-    else:
-        date_format = '%A %d'
-        _now = datetime.datetime.utcnow()
-        month = int(request.GET.get('month', _now.month))
-        year = int(request.GET.get('year', _now.year))
-        first = datetime.datetime(year, month, 1, 0, 0, 0)
-
-        if month == 12:
-            next = datetime.datetime(year + 1, 1, 1, 0, 0, 0)
-        else:
-            next = datetime.datetime(year, month + 1, 1, 0, 0, 0)
-
-        qs = qs.filter(date__gte=first, date__lt=next)
 
     if request.GET.get('latest'):
         latest = datetime.datetime.strptime(
