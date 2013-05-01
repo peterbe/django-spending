@@ -121,6 +121,7 @@ INSTALLED_APPS = (
     'django.contrib.staticfiles',
     'django.contrib.admin',
     'spending.main',
+    'spending.mobile',
     'bootstrapform',
 )
 

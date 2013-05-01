@@ -1,14 +1,14 @@
-from django.conf.urls.defaults import patterns, include, url
+from django.conf.urls import patterns, include, url
 from django.contrib.auth.views import login
 from . import views
 
 
 urlpatterns = patterns('',
     url('^$', views.home, name='home'),
-    url('^mobile/$', views.mobile, name='mobile'),
-    url('^mobile/auth/$', views.mobile_auth, name='mobile_auth'),
-    url('^mobile/appcache.manifest$', views.mobile_appcache,
-        name='mobile_appcache'),
+    #url('^mobile/$', views.mobile, name='mobile'),
+    #url('^mobile/auth/$', views.mobile_auth, name='mobile_auth'),
+    #url('^mobile/appcache.manifest$', views.mobile_appcache,
+    #    name='mobile_appcache'),
     url('^expenses/$', views.expenses, name='expenses'),
     url('^expenses.json$', views.expenses_json, name='expenses_json'),
     url('^expenses/(\d+)/edit/$', views.edit_expense, name='edit_expense'),

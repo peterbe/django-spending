@@ -1,65 +1,114 @@
 <!DOCTYPE html>
-<html>
-<head>
-	<meta charset="utf-8">
-	<meta name="viewport" content="width=device-width, initial-scale=1">
-	<title>Spending</title>
-	<link rel="stylesheet"  href="{{ STATIC_URL }}jquery-mobile/jquery.mobile-1.3.0.css">
-	<link rel="stylesheet" href="docs/_assets/css/jqm-demos.css">
-	<!--<link rel="shortcut icon" href="docs/favicon.ico">-->
-    <!--<link rel="stylesheet" href="http://fonts.googleapis.com/css?family=Open+Sans:300,400,700">-->
-        <script src="{{ STATIC_URL }}js/libs/jquery-1.9.1.min.js"></script>
-	<script src="docs/_assets/js/jquery.mobile.demos.js"></script>
-	<script src="{{ STATIC_URL }}jquery-mobile/jquery.mobile-1.3.0.js"></script>
+<!--<html xxxmanifest="/mobile/appcache.manifest" data-ng-app="AngularJSApp">-->
+<html xxxmanifest="/mobile/appcache.manifest" ng-app="myApp">
+  <head>
+    <meta charset="utf-8">
+    <title>Spending</title>
 
+    <!-- Sets initial viewport load and disables zooming  -->
+    <meta name="viewport" content="initial-scale=1, maximum-scale=1, user-scalable=no">
+
+    <!-- Makes your prototype chrome-less once bookmarked to your phone's home screen -->
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black">
+
+    <!-- Set Apple icons for when prototype is saved to home screen -->
     <link rel="apple-touch-icon-precomposed" sizes="144x144" href="{{ STATIC_URL }}images/favicon.144.png">
     <link rel="apple-touch-icon-precomposed" sizes="114x114" href="{{ STATIC_URL }}images/favicon.114.png">
     <link rel="apple-touch-icon-precomposed" sizes="72x72" href="{{ STATIC_URL }}images/favicon.72.png">
     <link rel="apple-touch-icon-precomposed" href="{{ STATIC_URL }}images/favicon.57.png">
 
-</head>
-<body>
+    <!-- Include the compiled Ratchet CSS -->
+    <link rel="stylesheet" href="{{ STATIC_URL }}ratchet/ratchet.css">
 
-<div data-role="page" id="home">
-  <div data-role="header">
-    <h1>Home</h1>
-  </div>
-  <div data-role="content">
+    <!-- Include the compiled Ratchet JS -->
+    <script src="{{ STATIC_URL }}ratchet/ratchet.js"></script>
+
+    <script src="{{ STATIC_URL }}js/libs/angular.min.js"></script>
+    <script src="{{ STATIC_URL }}js/libs/angular-resource.min.js"></script>
+    <script src="{{ STATIC_URL }}js/angularmobile.js"></script>
+
+    <style type="text/css">
+        .welcome {
+          line-height: 1.5;
+          color: #555;
+        }
+        input.missing, select.missing { border:1px solid red; }
+        .temphidden {
+          display: none;
+        }
+        .hidden { display:none; }
+    </style>
+
+  </head>
+  <body ng-controller="SpendingCtrl">
+
+  <!-- Make sure all your bars are the first things in your <body> -->
+  <header class="bar-title">
+    <h1 class="title">Spending</h1>
+  </header>
+
+  <!-- Wrap all non-bar HTML in the .content div (this is actually what scrolls) -->
+  <div class="content" ng-class="{hidden: !panels.form}"  id="home" data-title="Spending">
+    {% verbatim %}
     <form action="" class="content-padded expense-entry">
-      <input type="number" name="amount" placeholder="Amount">
-      <input type="date" id="id_date" name="date" placeholder="Date">
-      <input type="text" name="notes" placeholder="Notes">
-      <select name="category">
+      <input type="number" name="amount" placeholder="Amount"
+             ng-model="amount"
+             ng-class="{missing: validationerrors.amount}">
+      <select name="category" ng-model="category"
+              ng-class="{missing: validationerrors.category}">
       <option value="">Category</option>
-      <option value="_other">Other... (specify)</option>
+      <option ng-repeat="category in categories"
+              value="{{ category.id }}"
+      >{{ category.name }}</option>
+      <!--<option value="_other" ng-click="select_other()">Other... (specify)</option>-->
       </select>
-      <input type="text" placeholder="Other category" name="other_category">
-      <a href="#" data-role="button">Submit</a>
+      <input type="text"
+        ng-class="{hidden: !inputs.other_category, missing: validationerrors.other_category}"
+        ng-model="other_category"
+        placeholder="Other category" name="other_category">
+      <a class="button button-block" ng-click="submit()">Submit</a>
+      <input type="date" id="id_date" name="date" placeholder="Date" ng-model="date">
+      <input type="text" name="notes" placeholder="Notes" ng-model="notes">
+
+      <p class="username" ng-model="username" ng-show="!success_message">Logged in as <b>{{ username }}</b></p>
+
+      <p class="notloggedin" ng-show="is_logged_in">Currently <b>not logged in</b></p>
+
+      <p class="offline" ng-show="is_offline">Currently in <b>offline mode</b></p>
+
+      <p class="messages" ng-show="success_message">{{ success_message }}</p>
     </form>
+    {% endverbatim %}
+
+    <audio id="till">
+      <!-- AAC file (Chrome/Safari/IE9) -->
+      <source src="{{ STATIC_URL }}sounds/till_with_bell.m4a" type="audio/mpeg">
+      <!-- Ogg Vorbis (Firefox) -->
+      <source src="{{ STATIC_URL }}sounds/till_with_bell.ogg" type="audio/ogg">
+    </audio>
 
   </div>
-</div>
 
-<div data-role="page" id="signin">
-  <div data-role="header">
-    <a href="#" data-icon="home">Home</a>
-    <h1>Sign in</h1>
-    <!--<a href="#" data-icon="bars">Menu</a>-->
+  {% verbatim %}
+  <div class="content" ng-class="{hidden: !panels.signin}" id="signin"
+   data-title="Sign in"
+  >
+    <form action="" class="content-padded" ng-submit="signin()">
+
+      <!-- probably not needed -->
+      <input type="hidden" name="csrfmiddlewaretoken" ng-model="csrf_token">
+
+      <input type="text" name="username" placeholder="Username" ng-model="id_username">
+      <input type="password" name="password" placeholder="Password" ng-model="id_password">
+      <a class="button button-block">Submit</a>
+    </form>
   </div>
-  <div data-role="content">
-
-  </div>
-</div>
+  {% endverbatim %}
 
 
-<div data-role="footer" data-id="footer" data-position="fixed">
-	<div data-role="navbar">
-		<ul>
-			<li><a href="#" class="ui-btn-active ui-state-persist">Home</a></li>
-			<li><a href="#">Expenses</a></li>
-		</ul>
-	</div><!-- /navbar -->
-</div><!-- /footer -->
+<script src="{{ STATIC_URL }}js/libs/jquery-1.9.1.min.js"></script>
+<script src="{{ STATIC_URL }}js/libs/alertify.min.js"></script>
 
-</body>
+  </body>
 </html>
