@@ -791,6 +791,8 @@ def compare(request):
             .aggregate(Sum('amount'))
         )
         total = total['amount__sum']
+        if total is None:
+            total = 0.0
         category.total_str = dollars(total)
         all_categories.append(category)
 
