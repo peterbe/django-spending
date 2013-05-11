@@ -11,6 +11,8 @@ module.config(function ($httpProvider) {
     + 'application/x-www-form-urlencoded; charset=UTF-8';
 });
 
+SpendingCtrl.$inject = ['$scope', '$http', '$tmeout'];
+
 function SpendingCtrl($scope, $http, $timeout) {
   // controlling which panels to show
   $scope.panels = {};
