@@ -11,18 +11,6 @@ module.config(function ($httpProvider) {
     + 'application/x-www-form-urlencoded; charset=UTF-8';
 });
 
-//
-//var app = angular.module('AngularJSApp', []);
-
-/*
-angular.module('project', []).config(function($routeProvider) {
-  $routeProvider.
-    when('/mobile/auth/', {controller:SignInCtrl});//.
-    //otherwise({redirectTo:'/'});
-});
-*/
-
-
 function SpendingCtrl($scope, $http, $timeout) {
   // controlling which panels to show
   $scope.panels = {};
