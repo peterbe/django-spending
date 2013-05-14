@@ -11,7 +11,7 @@ module.config(function ($httpProvider) {
     + 'application/x-www-form-urlencoded; charset=UTF-8';
 });
 
-SpendingCtrl.$inject = ['$scope', '$http', '$tmeout'];
+SpendingCtrl.$inject = ['$scope', '$http', '$timeout'];
 
 function SpendingCtrl($scope, $http, $timeout) {
   // controlling which panels to show
@@ -126,6 +126,8 @@ function SpendingCtrl($scope, $http, $timeout) {
               $scope.success_message = null;
             }, 10 * 1000);
             $scope.inputs.other_category = false;
+            $scope.amount = null;
+            $scope.notes = null;
             document.getElementById('till').play();
           }
 

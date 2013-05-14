@@ -19,7 +19,7 @@ class ExpenseForm(forms.ModelForm):
 
     class Meta:
         model = Expense
-        exclude = ('added', 'user', 'category')
+        exclude = ('added', 'user', 'category', 'household')
 
 
 class MobileExpenseForm(forms.ModelForm):
@@ -29,7 +29,7 @@ class MobileExpenseForm(forms.ModelForm):
 
     class Meta:
         model = Expense
-        exclude = ('added', 'user', 'category')
+        exclude = ('added', 'user', 'category', 'household')
 
     def __init__(self, *args, **kwargs):
         super(MobileExpenseForm, self).__init__(*args, **kwargs)
@@ -52,6 +52,7 @@ class CategoryForm(forms.ModelForm):
 
     def clean_name(self):
         value = self.cleaned_data['name'].strip()
+
         if Category.objects.exclude(pk=self.instance.pk).filter(name__iexact=value):
             raise forms.ValidationError('Named used by a different category')
         return value

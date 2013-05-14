@@ -123,6 +123,7 @@ INSTALLED_APPS = (
     'spending.main',
     'spending.mobile',
     'bootstrapform',
+    #'django_extensions',
 )
 
 MESSAGE_STORAGE = 'django.contrib.messages.storage.session.SessionStorage'

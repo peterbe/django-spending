@@ -10,7 +10,7 @@ class MobileExpenseForm(forms.ModelForm):
 
     class Meta:
         model = Expense
-        exclude = ('added', 'user', 'category')
+        exclude = ('added', 'user', 'category', 'household')
 
     def __init__(self, *args, **kwargs):
         super(MobileExpenseForm, self).__init__(*args, **kwargs)

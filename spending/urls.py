@@ -9,7 +9,7 @@ urlpatterns = patterns('',
     # Examples:
     # url(r'^$', 'spending.views.home', name='home'),
     url(r'', include('spending.main.urls')),
-    url(r'^mobile/', include('spending.mobile.urls')),
+    url(r'^mobile/', include('spending.mobile.urls', namespace='mobile')),
     url(r'^admin/', include(admin.site.urls)),
 )
 

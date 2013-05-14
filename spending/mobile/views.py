@@ -7,8 +7,9 @@ from django.contrib.auth.decorators import login_required
 from django.views.decorators.http import require_POST
 from django.contrib.auth.views import login
 from django.middleware.csrf import get_token
-from spending.main.models import Expense, Category
+from spending.main.models import Household, Expense, Category
 from spending.main.utils import json_view
+from spending.main.views import get_household
 from . import forms
 
 
@@ -21,6 +22,7 @@ def home(request):
 @require_POST
 @json_view
 def submit(request):
+    household = get_household(request.user)
     form = forms.MobileExpenseForm(data=request.POST)
     if form.is_valid():
         data = form.cleaned_data
@@ -28,13 +30,30 @@ def submit(request):
         if category_value == '_other':
             category_value = data['other_category']
         try:
-            category = Category.objects.get(name__istartswith=category_value)
+            if category_value.isdigit():
+                category = Category.objects.get(
+                    pk=category_value,
+                    household=household
+                )
+            else:
+                category = Category.objects.get(
+                    name__istartswith=category_value,
+                    household=household
+                )
         except Category.DoesNotExist:
-            category = Category.objects.create(name=category_value)
+            category = Category.objects.create(
+                name=category_value,
+                household=household
+            )
 
         expense = None
         try:
-            last_expense, = Expense.objects.filter(user=request.user).order_by('-added')[:1]
+            last_expense, = (
+                Expense.objects
+                .filter(household=household)
+                .filter(user=request.user)
+                .order_by('-added')[:1]
+            )
             if (
                 last_expense.amount == data['amount']
                 and
@@ -50,6 +69,7 @@ def submit(request):
             pass
         if expense is None:
             expense = Expense.objects.create(
+                household=household,
                 category=category,
                 amount=data['amount'],
                 user=request.user,
@@ -81,7 +101,8 @@ def auth(request):
 @login_required
 @json_view
 def categories(request):
-    qs = Category.objects.all()
+    household = get_household(request.user)
+    qs = Category.objects.filter(household=household)
     result = {
         'categories': []
     }

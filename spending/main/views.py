@@ -28,7 +28,7 @@ from django.contrib.auth.views import login
 from django.middleware.csrf import get_token
 
 from . import forms
-from .models import Expense, Category
+from .models import Household, Expense, Category
 from .utils import json_view
 
 
@@ -39,10 +39,15 @@ def dollars(amount):
     return '$' + locale.format('%.2f', amount, True)
 
 
+def get_household(user):
+    return Household.objects.get(users=user)
+
+
 @csrf_exempt
 @transaction.commit_on_success
 def home(request, template_name='home.html', data=None, form_class=forms.ExpenseForm):
     data = data or {}
+    household = get_household(request.user)
     if request.method == 'POST':
         form = form_class(data=request.POST)
         if form.is_valid():
@@ -51,10 +56,18 @@ def home(request, template_name='home.html', data=None, form_class=forms.Expense
             if category_value == '_other':
                 category_value = data['other_category']
             try:
-                category = Category.objects.get(name__istartswith=category_value)
+                category = Category.objects.get(
+                    name__istartswith=category_value,
+                    household=household
+                )
             except Category.DoesNotExist:
-                category = Category.objects.create(name=category_value)
+                category = Category.objects.create(
+                    name=category_value,
+                    household=household
+                )
+
             expense = Expense.objects.create(
+                household=household,
                 category=category,
                 amount=data['amount'],
                 user=request.user,
@@ -78,7 +91,7 @@ def home(request, template_name='home.html', data=None, form_class=forms.Expense
         form = bootstrapform(forms.ExpenseForm(initial=initial))
     data['form'] = form
 
-    data['category_names'] = _category_names()
+    data['category_names'] = _category_names(household)
     return render(request, template_name, data)
 
 
@@ -96,8 +109,8 @@ def mobile(request):
     )
 
 
-def _category_names(exclude=None):
-    qs = Category.objects.all()
+def _category_names(household, exclude=None):
+    qs = Category.objects.filter(household=household)
     if exclude:
         qs = qs.exclude(pk=exclude.pk)
     category_names = [x.name for x in qs.order_by('name')]
@@ -112,7 +125,8 @@ def bootstrapform(form):
 
 @login_required
 def categories_json(request):
-    qs = Category.objects.all()
+    household = get_household(request.user)
+    qs = Category.objects.filter(household=household)
     result = {
         'categories': []
     }
@@ -135,7 +149,6 @@ def expenses(request):
         month, year = FULL_MONTH_REGEX.findall(request.GET.get('month'))[0]
         year = int(year)
         month = MONTH_NAMES.index(month) + 1
-        print request.META.get('QUERY_STRING')
         new_qs = {
             'month': month,
             'year': year,
@@ -150,11 +163,19 @@ def expenses(request):
 
     first = datetime.datetime(year, month, 1, 0, 0, 0)
 
+    household = get_household(request.user)
+
     if request.GET.get('category'):
         if request.GET.get('category').isdigit():
-            category = Category.objects.get(pk=request.GET['category'])
+            category = Category.objects.get(
+                pk=request.GET['category'],
+                household=household
+            )
         else:
-            category = Category.objects.get(name__iexact=request.GET['category'])
+            category = Category.objects.get(
+                name__iexact=request.GET['category'],
+                household=household
+            )
     else:
         category = None
 
@@ -170,7 +191,8 @@ def expenses(request):
 
 @login_required
 def expenses_json(request):
-    qs = Expense.objects.all().select_related()
+    household = get_household(request.user)
+    qs = Expense.objects.filter(household=household)#.select_related('')
     rows = []
 
     date_format = '%A %d'
@@ -190,9 +212,15 @@ def expenses_json(request):
 
     if request.GET.get('category'):
         if request.GET.get('category').isdigit():
-            category = Category.objects.get(pk=request.GET['category'])
+            category = Category.objects.get(
+                pk=request.GET['category'],
+                household=household
+            )
         else:
-            category = Category.objects.get(name__iexact=request.GET['category'])
+            category = Category.objects.get(
+                name__iexact=request.GET['category'],
+                household=household
+            )
         qs = qs.filter(category=category)
         date_format = '%A %d %b %Y'
 
@@ -244,6 +272,7 @@ def expenses_json(request):
 @login_required
 def edit_expense(request, pk):
     data = {}
+    household = get_household(request.user)
     expense = get_object_or_404(Expense, pk=pk)
     if request.method == 'POST':
         form = forms.ExpenseForm(request.POST, instance=expense)
@@ -285,7 +314,7 @@ def edit_expense(request, pk):
 
     data['form'] = bootstrapform(form)
     data['expense'] = expense
-    data['category_names'] = _category_names()
+    data['category_names'] = _category_names(household)
 
     return render(request, 'edit.html', data)
 
@@ -293,7 +322,8 @@ def edit_expense(request, pk):
 @login_required
 @require_POST
 def delete_expense(request, pk):
-    expense = get_object_or_404(Expense, pk=pk)
+    household = get_household(request.user)
+    expense = get_object_or_404(Expense, pk=pk, household=household)
     messages.add_message(
         request,
         messages.INFO,
@@ -311,8 +341,9 @@ def charts(request):
 
 @login_required
 def charts_timeline(request):
-    first, = Expense.objects.all().order_by('date')[:1]
-    last, = Expense.objects.all().order_by('-date')[:1]
+    household = get_household(request.user)
+    first, = Expense.objects.filter(household=household).order_by('date')[:1]
+    last, = Expense.objects.filter(household=household).order_by('-date')[:1]
     first = first.date
     last = last.date
 
@@ -323,7 +354,7 @@ def charts_timeline(request):
         points = defaultdict(list)
         cum_points = defaultdict(int)
         categories = [(x.pk, x.name) for x in
-                      Category.objects.all()]
+                      Category.objects.filter(household=household)]
         _categories = dict(categories)
 
         while date < last:
@@ -337,7 +368,8 @@ def charts_timeline(request):
             counts = defaultdict(int)
             for expense in (Expense.objects
                          .filter(date__gte=date,
-                                 date__lt=next)):
+                                 date__lt=next,
+                                 household=household)):
                 counts[expense.category_id] += float(expense.amount)
 
             for category_id, name in categories:
@@ -426,16 +458,16 @@ class ColorPump(object):
 
 @login_required
 def calendar(request):
+    household = get_household(request.user)
     months = []
     month = None
-    qs = Expense.objects.all()
+    qs = Expense.objects.filter(household=household)
     qs = qs.order_by('date')
     qs = qs.values_list('amount', 'date', 'category_id')
-    rent = Category.objects.get(name__iexact='Rent')
+    rent = Category.objects.get(name__iexact='Rent', household=household)
     bucket = {}
     last_date = None
     for amount, date, category_id in qs:
-        print date
         if date.strftime('%B %Y') != month:
             month = date.strftime('%B %Y')
             # new month
@@ -469,10 +501,10 @@ def calendar(request):
         now = datetime.datetime.utcnow()
         then = now - datetime.timedelta(days=DAYS_BACK_PROJECTION)
 
-        if Expense.objects.filter(date__lt=then).count():
+        if Expense.objects.filter(date__lt=then, household=household).count():
             _query = (
                 Expense.objects
-                .filter(date__gte=then)
+                .filter(date__gte=then, household=household)
                 .exclude(category=rent)
             )
             total_past = _query.aggregate(Sum('amount'))['amount__sum']
@@ -492,7 +524,8 @@ def calendar(request):
                 Expense.objects
                 .filter(date__month=bucket['month'],
                         date__year=bucket['year'],
-                        category=rent)
+                        category=rent,
+                        household=household)
             )
             if not rents_this_month.count():
                 last_month, last_year = bucket['month'], bucket['year']
@@ -506,7 +539,8 @@ def calendar(request):
                     Expense.objects
                     .filter(date__month=last_month,
                             date__year=last_year,
-                            category=rent)
+                            category=rent,
+                            household=household)
                 )
                 bucket['amount_total_projected'] += (
                     rents_last_month.aggregate(Sum('amount'))['amount__sum']
@@ -590,9 +624,10 @@ def calendar(request):
 
 @login_required
 def categories(request):
+    household = get_household(request.user)
     all = []
-    for category in Category.objects.all().order_by('name'):
-        qs = Expense.objects.filter(category=category)
+    for category in Category.objects.filter(household=household).order_by('name'):
+        qs = Expense.objects.filter(category=category, household=household)
         category.total = qs.aggregate(Sum('amount'))['amount__sum'] or Decimal('0')
         category.total_str = dollars(category.total)
         category.count = qs.count()
@@ -613,8 +648,9 @@ def categories(request):
 
 @login_required
 def category(request, pk):
-    category = get_object_or_404(Category, pk=pk)
-    qs = Expense.objects.filter(category=category)
+    household = get_household(request.user)
+    category = get_object_or_404(Category, pk=pk, household=household)
+    qs = Expense.objects.filter(category=category, household=household)
     total = qs.aggregate(Sum('amount'))['amount__sum'] or Decimal('0')
     data = {
         'category': category,
@@ -623,15 +659,16 @@ def category(request, pk):
         'total_str': dollars(total),
         'edit_form': bootstrapform(forms.CategoryForm(instance=category)),
         'move_form': bootstrapform(forms.CategoryMoveForm()),
-        'category_names': _category_names(exclude=category),
+        'category_names': _category_names(household, exclude=category),
     }
     return render(request, 'category.html', data)
 
 
 @login_required
 def delete_category(request, pk):
-    category = get_object_or_404(Category, pk=pk)
-    assert not Expense.objects.filter(category=category).count()
+    household = get_household(request.user)
+    category = get_object_or_404(Category, pk=pk, household=household)
+    assert not Expense.objects.filter(category=category, household=household).count()
     category.delete()
     return redirect(reverse('categories'))
 
@@ -639,7 +676,8 @@ def delete_category(request, pk):
 @login_required
 @require_POST
 def edit_category(request, pk):
-    category = get_object_or_404(Category, pk=pk)
+    household = get_household(request.user)
+    category = get_object_or_404(Category, pk=pk, household=household)
     form = forms.CategoryForm(request.POST, instance=category)
     if form.is_valid():
         form.save()
@@ -651,30 +689,17 @@ def edit_category(request, pk):
 @login_required
 @require_POST
 def move_category(request, pk):
-    category = get_object_or_404(Category, pk=pk)
+    household = get_household(request.user)
+    category = get_object_or_404(Category, pk=pk, household=household)
     form = forms.CategoryMoveForm(request.POST)
     if form.is_valid():
-        new_category = Category.objects.get(name=form.cleaned_data['name'])
-        for expense in Expense.objects.filter(category=category):
+        new_category = Category.objects.get(name=form.cleaned_data['name'], household=household)
+        for expense in Expense.objects.filter(category=category, household=household):
             expense.category = new_category
             expense.save()
         return redirect(reverse('category', args=(category.pk,)))
     else:
         return http.HttpResponse('<h2>Error</h2>' + str(form.errors))
-
-
-
-@json_view
-def mobile_auth(request):
-    data = {}
-    if request.method == 'POST':
-        response = login(request)
-        assert response.status_code == 302, response.status_code
-    else:
-        data['csrf_token'] = get_token(request)
-    if request.user.is_authenticated():
-        data['username'] = request.user.username
-    return data
 
 
 def mobile_appcache(request):
@@ -697,13 +722,17 @@ def mobile_appcache(request):
 @login_required
 @json_view
 def compare(request):
+    household = get_household(request.user)
 
     _category_ids = []
     for c in request.GET.get('c', '').split(','):
         if not c:
             continue
         _category_ids.append(int(c))
-    _categories = Category.objects.filter(id__in=_category_ids)
+    _categories = Category.objects.filter(
+        id__in=_category_ids,
+        household=household
+    )
 
     dates = []
     for m in request.GET.get('m', '').split(','):
@@ -724,7 +753,7 @@ def compare(request):
 
         data = [head]
 
-        base_qs = Expense.objects
+        base_qs = Expense.objects.filter(household=household)
         base_qs = base_qs.filter(category__in=_categories)
 
         #if without:
@@ -748,7 +777,7 @@ def compare(request):
         sums.reverse()
         category_names = {}
         category_ids = [x[1] for x in sums]
-        for each in Category.objects.filter(id__in=category_ids):
+        for each in Category.objects.filter(id__in=category_ids, household=household):
             category_names[each.pk] = each.name
 
         for category_id in category_ids:
@@ -761,7 +790,10 @@ def compare(request):
         return {'data': data, 'title': None, 'rowcount': len(category_ids)}
 
     all_months = []
-    first, = Expense.objects.all().values('date').order_by('date')[:1]
+    first, = (
+        Expense.objects.filter(household=household)
+        .values('date').order_by('date')[:1]
+    )
     date = first['date']
     today = datetime.date.today()
     while date < today:
@@ -770,6 +802,7 @@ def compare(request):
             next += datetime.timedelta(days=1)
         count = (
             Expense.objects
+            .filter(household=household)
             .filter(date__year=date.year, date__month=date.month)
             .count()
         )
@@ -783,10 +816,11 @@ def compare(request):
         date = next
 
     all_categories = []
-    for category in Category.objects.all().order_by('name'):
+    for category in Category.objects.filter(household=household).order_by('name'):
         category.checked = category in _categories
         total = (
             Expense.objects
+            .filter(household=household)
             .filter(category=category)
             .aggregate(Sum('amount'))
         )
