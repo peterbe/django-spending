@@ -19,8 +19,12 @@ import site
 
 os.environ.setdefault("DJANGO_SETTINGS_MODULE", "spending.settings")
 
+def here(*path):
+    _HERE = os.path.dirname(__file__)
+    return os.path.join(_HERE, *path)
+
 prev_sys_path = list(sys.path)
-site.addsitedir('vendor-local/lib/python')
+site.addsitedir(here('vendor-local/lib/python'))
 
 new_sys_path = []
 for item in list(sys.path):
@@ -35,6 +39,6 @@ sys.path[:0] = new_sys_path
 from django.core.wsgi import get_wsgi_application
 application = get_wsgi_application()
 
-import django
-print django.__file__
-print django.get_version()
+#import django
+#print django.__file__
+#print django.get_version()
