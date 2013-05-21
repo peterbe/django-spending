@@ -1,3 +1,5 @@
+import os
+import stat
 import datetime
 
 from django.shortcuts import render, get_object_or_404, redirect
@@ -109,3 +111,21 @@ def categories(request):
     for each in qs.order_by('name'):
         result['categories'].append([each.name, each.pk])
     return result
+
+
+def appcache(request):
+    data = {}
+    views_ts = os.stat(__file__)[stat.ST_MTIME]
+    tmpl_fs = os.path.join(
+        os.path.dirname(__file__),
+        'templates',
+        'mobile',
+        'appcache.html'
+    )
+    tmpl_ts = os.stat(tmpl_fs)[stat.ST_MTIME]
+    data['version'] = max(views_ts, tmpl_ts)
+
+    response = render(request, 'mobile/appcache.html', data)
+    response['Content-Type'] = 'text/cache-manifest'
+
+    return response

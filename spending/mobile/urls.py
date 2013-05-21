@@ -7,4 +7,5 @@ urlpatterns = patterns('',
     url('^submit/$', views.submit),
     url('^auth/$', views.auth, name='auth'),
     url('^categories/$', views.categories, name='categories'),
+    url('^appcache.manifest$', views.appcache, name='appcache'),
 )
