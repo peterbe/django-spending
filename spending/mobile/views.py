@@ -1,3 +1,4 @@
+import calendar
 import os
 import stat
 import datetime
@@ -5,6 +6,7 @@ import datetime
 from django.shortcuts import render, get_object_or_404, redirect
 from django.core.urlresolvers import reverse
 from django.db import transaction
+from django.db.models import Max
 from django.contrib.auth.decorators import login_required
 from django.views.decorators.http import require_POST
 from django.contrib.auth.views import login
@@ -82,6 +84,7 @@ def submit(request):
         data = {
             'success_message': '$%.2f for %s added' % (expense.amount, expense.category.name),
             #'todays_date': today.strftime('%Y-%m-%d'),
+            'categories_revision': get_categories_revision(household),
         }
     else:
         data = {'errors': form.errors}
@@ -106,11 +109,24 @@ def categories(request):
     household = get_household(request.user)
     qs = Category.objects.filter(household=household)
     result = {
-        'categories': []
+        'categories': [],
+        'revision': get_categories_revision(household),
     }
     for each in qs.order_by('name'):
         result['categories'].append([each.name, each.pk])
     return result
+
+
+def get_categories_revision(household):
+    qs = (
+        Category.objects
+        .filter(household=household)
+        .aggregate(Max('modified'))
+    )
+    modified = qs['modified__max']
+    if modified:
+        return str(calendar.timegm(modified.utctimetuple()))
+    return 'nocategories'
 
 
 def appcache(request):
@@ -123,7 +139,14 @@ def appcache(request):
         'appcache.html'
     )
     tmpl_ts = os.stat(tmpl_fs)[stat.ST_MTIME]
-    data['version'] = max(views_ts, tmpl_ts)
+    js_fs = os.path.join(
+        os.path.dirname(__file__),
+        'static',
+        'js',
+        'angularmobile.js'
+    )
+    js_ts = os.stat(js_fs)[stat.ST_MTIME]
+    data['version'] = max(views_ts, tmpl_ts, js_ts)
 
     response = render(request, 'mobile/appcache.html', data)
     response['Content-Type'] = 'text/cache-manifest'

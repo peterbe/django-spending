@@ -121,6 +121,12 @@ function SpendingCtrl($scope, $http, $timeout) {
               alert('ERROR ' + key + ': ' + message);
             });
           } else {
+            if (data.categories_revision) {
+              if (data.categories_revision != localStorage.getItem('spendingcategoriesrevision')) {
+                // the categories have changed! update localStorage
+                load_categories();
+              }
+            }
             $scope.success_message = data.success_message;
             $timeout(function() {
               $scope.success_message = null;
@@ -128,6 +134,7 @@ function SpendingCtrl($scope, $http, $timeout) {
             $scope.inputs.other_category = false;
             $scope.amount = null;
             $scope.notes = null;
+            $scope.category = '';
             document.getElementById('till').play();
           }
 
@@ -158,11 +165,8 @@ function SpendingCtrl($scope, $http, $timeout) {
   });
 
   $scope.categories = [];
-  if (localStorage.getItem('spendingcategories')) {
-    var spendingcategories = localStorage.getItem('spendingcategories');
-    $scope.categories = JSON.parse(spendingcategories);
-    $scope.categories.push({name: 'Other... (specify)', id: 0});
-  } else {
+
+  function load_categories() {
     $http.get('/mobile/categories/', { })
       .success(function(data) {
         var _new_categories = [];
@@ -170,12 +174,30 @@ function SpendingCtrl($scope, $http, $timeout) {
           _new_categories.push({name: each[0], id: each[1]});
         });
         localStorage.setItem('spendingcategories', JSON.stringify(_new_categories));
+        localStorage.setItem('spendingcategoriesrevision', data.revision);
         _new_categories.push({name: 'Other... (specify)', id: 0})
         $scope.categories = _new_categories;
       })
       .error(function(data, status) {
         console.log('ERROR', data, status);
       });
+  }
+
+  if (localStorage.getItem('spendingcategories') && localStorage.getItem('spendingcategoriesrevision')) {
+    var spendingcategories = localStorage.getItem('spendingcategories');
+    try {
+      $scope.categories = JSON.parse(spendingcategories);
+      if ($scope.categories.length) {
+        $scope.categories.push({name: 'Other... (specify)', id: 0});
+      } else {
+        load_categories();
+      }
+    } catch(ex) {
+      console.log(ex);
+      load_categories();
+    }
+  } else {
+    load_categories();
   }
 
 };

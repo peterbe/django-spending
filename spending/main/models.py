@@ -2,6 +2,7 @@ import datetime
 from django.db import models
 from django.contrib.auth.models import User
 from django.utils.timezone import utc
+from django.dispatch import receiver
 
 
 def today():
@@ -22,8 +23,16 @@ class Household(models.Model):
 class Category(models.Model):
     name = models.CharField(max_length=100)
     household = models.ForeignKey(Household, db_index=True)
+    modified = models.DateTimeField(default=now, db_index=True)
     def __unicode__(self):
         return self.name
+
+
+@receiver(models.signals.pre_save, sender=Category)
+def update_modified(sender, instance, raw, *args, **kwargs):
+    if raw:
+        return
+    instance.modified = now()
 
 
 class Expense(models.Model):
