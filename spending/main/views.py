@@ -40,11 +40,13 @@ def dollars(amount):
 
 
 def get_household(user):
+    assert user
     return Household.objects.get(users=user)
 
 
 @csrf_exempt
 @transaction.commit_on_success
+@login_required
 def home(request, template_name='home.html', data=None, form_class=forms.ExpenseForm):
     data = data or {}
     household = get_household(request.user)
