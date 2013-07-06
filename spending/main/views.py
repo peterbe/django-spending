@@ -544,9 +544,9 @@ def calendar(request):
                             category=rent,
                             household=household)
                 )
-                bucket['amount_total_projected'] += (
-                    rents_last_month.aggregate(Sum('amount'))['amount__sum']
-                )
+                sum_ = rents_last_month.aggregate(Sum('amount'))['amount__sum']
+                if sum_ is not None:
+                    bucket['amount_total_projected'] += sum_
 
         months.append(bucket)
 
